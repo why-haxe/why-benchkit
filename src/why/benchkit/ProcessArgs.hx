@@ -3,8 +3,8 @@ package why.benchkit;
 /**
 	Process argv for the suite CLI.
 	- sys / `node`: `Sys.args()`
-	- browser `js`: `window.benchkitArgs` (string array), set by the host / travix hooks
-	  (Phase 5–6). Empty when unset.
+	- browser `js`: `window.benchkitArgs` (string array), set by the host
+	  (Phase 6) when driving browser runs. Empty when unset.
 	Note: under `haxe --interp`, `Sys.args()` includes compiler args; travix still
 	appends suite flags after `--interp`, so `--json <path>` remains visible to parse.
 **/

@@ -49,7 +49,11 @@ class Run {
 		}
 	}
 
-	/** Host multi-target runner — implemented in Phase 6. */
+	/**
+		Host multi-target runner — implemented in Phase 6.
+		For target `js`, that phase must set `TRAVIX_CONFIG_DIR` to the absolute
+		path of this package's `.travix/` config root (see `.travix/README.md`).
+	**/
 	static function runStub(args:Array<String>):Void {
 		Sys.println('why-benchkit run: not implemented yet (Phase 6)');
 		Sys.println('cwd: ${Sys.getCwd()}');
