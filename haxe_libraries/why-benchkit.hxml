@@ -1,0 +1,4 @@
+# Local self-mount so travix Command.build's `-lib why-benchkit` resolves under lix scoped mode.
+-cp ${SCOPE_DIR}/src
+-lib travix
+-D why-benchkit=0.0.1

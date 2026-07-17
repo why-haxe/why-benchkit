@@ -22,4 +22,6 @@ That value **replaces** the consumer cwd `.travix` for that run — it is not a 
 
 `benchkitWriteFile` paths are resolved on the **host** (Node) relative to process cwd — after `Run` switches cwd, that is the consumer project. Prefer absolute paths from the host CLI when emitting `--json` / `--json-dir` outputs.
 
+When the host sets **`WHY_BENCHKIT_JSON`** (from `--json-dir`), `beforeGoto` also assigns `window.benchkitArgs = ['--json', path]` so the suite process can resolve the output path in the browser.
+
 Do **not** use deprecated `bin/js/run.js` / `run.html` overrides for this bridge.

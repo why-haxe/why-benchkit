@@ -1,8 +1,8 @@
 /**
  * Packaged travix hooks for why-benchkit browser `js` runs.
  *
- * Host (Phase 6+) must set TRAVIX_CONFIG_DIR to the absolute path of this
- * packaged `.travix/` directory (the config root), e.g.:
+ * Host must set TRAVIX_CONFIG_DIR to the absolute path of this packaged
+ * `.travix/` directory (the config root), e.g.:
  *
  *   TRAVIX_CONFIG_DIR=/absolute/path/to/why-benchkit/.travix
  *
@@ -12,6 +12,10 @@
  *
  * Exposes window.benchkitWriteFile(path, content) so suite JSON can be written
  * from the page via host-side fs.writeFileSync.
+ *
+ * When WHY_BENCHKIT_JSON is set (host `--json-dir`), also sets
+ * window.benchkitArgs to ["--json", path] before navigation so ProcessFlags
+ * can resolve the output path in the browser.
  */
 const fs = require("fs");
 
@@ -21,5 +25,12 @@ module.exports = {
 			// Host-side write: path is relative to Node cwd (consumer project), not the page URL.
 			fs.writeFileSync(filePath, content, "utf8");
 		});
+
+		const jsonPath = process.env.WHY_BENCHKIT_JSON;
+		if (jsonPath) {
+			await page.evaluateOnNewDocument((path) => {
+				window.benchkitArgs = ["--json", path];
+			}, jsonPath);
+		}
 	},
 };

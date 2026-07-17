@@ -3,10 +3,12 @@ package why.benchkit;
 /**
 	Process argv for the suite CLI.
 	- sys / `node`: `Sys.args()`
-	- browser `js`: `window.benchkitArgs` (string array), set by the host
-	  (Phase 6) when driving browser runs. Empty when unset.
-	Note: under `haxe --interp`, `Sys.args()` includes compiler args; travix still
-	appends suite flags after `--interp`, so `--json <path>` remains visible to parse.
+	- browser `js`: `window.benchkitArgs` (string array), set by packaged
+	  `.travix/js/hooks.js` from `WHY_BENCHKIT_JSON` when the host drives `js` runs.
+	  Empty when unset.
+	Host `--json-dir` primarily uses env `WHY_BENCHKIT_JSON` (see `ProcessFlags`);
+	under `haxe --interp`, `Sys.args()` also includes compiler args, so a literal
+	`--json <path>` in travix rest would be visible — prefer the env for all targets.
 **/
 class ProcessArgs {
 	function new() {}

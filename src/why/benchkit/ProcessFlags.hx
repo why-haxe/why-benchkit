@@ -4,9 +4,13 @@ package why.benchkit;
 	Process-level CLI flags for a compiled suite.
 	Always print a console summary; optional `--json <path>` writes machine-readable results.
 	Args come from `ProcessArgs` (`Sys.args()` on sys/node; `window.benchkitArgs` on browser `js`).
+
+	When the host runs with `--json-dir`, it sets `WHY_BENCHKIT_JSON` because travix
+	`buildAndRun` does not forward runtime argv on most targets. Browser `js` gets
+	`--json` via `window.benchkitArgs` from packaged `.travix/js/hooks.js`.
 **/
 class ProcessFlags {
-	/** Path for JSON output when `--json` was passed; otherwise `null`. */
+	/** Path for JSON output when `--json` / `WHY_BENCHKIT_JSON` was set; otherwise `null`. */
 	public final jsonPath:Null<String>;
 
 	function new(jsonPath:Null<String>) {
@@ -14,7 +18,8 @@ class ProcessFlags {
 	}
 
 	/**
-		Parse suite process args. Recognizes `--json <path>`.
+		Parse suite process args. Recognizes `--json <path>`, then falls back to
+		env `WHY_BENCHKIT_JSON` (set by the host multi-target runner).
 		Throws if `--json` is present without a following path.
 	**/
 	public static function parse(args:Array<String>):ProcessFlags {
@@ -34,6 +39,19 @@ class ProcessFlags {
 				i += 1;
 			}
 		}
+		if (jsonPath == null)
+			jsonPath = jsonPathFromEnv();
 		return new ProcessFlags(jsonPath);
+	}
+
+	static function jsonPathFromEnv():Null<String> {
+		#if (js && !nodejs)
+		return null;
+		#else
+		final fromEnv = Sys.getEnv(BenchkitEnv.JSON_PATH);
+		if (fromEnv == null || fromEnv.length == 0)
+			return null;
+		return fromEnv;
+		#end
 	}
 }
