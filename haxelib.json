@@ -4,6 +4,7 @@
 	"description": "A library for benchmarking code",
 	"license": "MIT",
 	"classPath": "src",
+	"main": "Run",
 	"tags": ["benchmark", "performance"],
 	"contributors": ["kevinresol"],
 	"releasenote": "Initial release",

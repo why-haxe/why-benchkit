@@ -1,0 +1,5 @@
+# Type-check the haxelib / lix run entry (root Run.hx).
+# Usage: haxe check-run.hxml
+-cp .
+--no-output
+-main Run
