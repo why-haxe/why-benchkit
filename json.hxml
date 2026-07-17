@@ -1,0 +1,7 @@
+# Phase 3 smoke: --json parsing, SuiteJson shape, filesystem write on interp.
+# Usage: haxe json.hxml
+-cp src
+-cp tests
+-lib travix
+-main JsonSmoke
+--interp

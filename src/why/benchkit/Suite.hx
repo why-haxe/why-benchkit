@@ -1,5 +1,7 @@
 package why.benchkit;
 
+import travix.Logger;
+
 /**
 	Named micro-benchmark suite: register cases with `bench`, run with `run`.
 **/
@@ -37,9 +39,10 @@ class Suite {
 
 	/**
 		Measure each registered case, print a console summary via `travix.Logger`,
-		and return in-memory results for later JSON emission.
+		optionally write `--json <path>` from process args, then exit via `Logger.exit`
+		(unless `opts.exit` is `false`).
 	**/
-	public function run():SuiteResult {
+	public function run(?opts:SuiteRunOptions):SuiteResult {
 		final results:Array<BenchCaseResult> = [];
 		for (c in cases) {
 			final m = Measure.run(c.fn, {
@@ -60,6 +63,23 @@ class Suite {
 			results: results,
 		};
 		ConsoleReporter.report(suiteResult);
+
+		var exitCode = 0;
+		try {
+			final flags = ProcessFlags.parse(opts?.args ?? ProcessArgs.get());
+			if (flags.jsonPath != null)
+				JsonWriter.write(flags.jsonPath, SuiteJson.stringify(suiteResult));
+		} catch (e:Dynamic) {
+			Logger.println('why.benchkit: error: ${Std.string(e)}');
+			exitCode = 1;
+		}
+
+		if (opts?.exit ?? true)
+			Logger.exit(exitCode);
+
+		if (exitCode != 0)
+			throw 'why.benchkit: suite run failed (exit $exitCode)';
+
 		return suiteResult;
 	}
 }

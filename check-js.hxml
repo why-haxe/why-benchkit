@@ -1,0 +1,7 @@
+# Type-check why.benchkit for browser JS (exercises `#if (js && !nodejs)` branches).
+# Usage: haxe check-js.hxml
+-cp src
+-lib travix
+-js dump/check-js.js
+--no-output
+why.benchkit.Bench

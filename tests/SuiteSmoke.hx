@@ -39,7 +39,8 @@ class SuiteSmoke {
 			iterations: 8_000,
 		});
 
-		final result = suite.run();
+		// exit: false so assertions below can run in-process (suite process defaults to Logger.exit).
+		final result = suite.run({exit: false});
 
 		if (result.name != "suite_smoke")
 			throw 'SuiteSmoke: unexpected suite name ${result.name}';

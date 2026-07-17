@@ -1,7 +1,7 @@
 package why.benchkit;
 
 /**
-	In-memory suite outcome from `Suite.run` (console + future JSON).
+	In-memory suite outcome from `Suite.run` (console + JSON).
 **/
 typedef SuiteResult = {
 	final name:String;
