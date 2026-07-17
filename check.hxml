@@ -1,0 +1,6 @@
+# Type-check why.benchkit (Haxe version from .haxerc).
+# Usage: haxe check.hxml
+-cp src
+-lib travix
+--no-output
+why.benchkit.Bench
