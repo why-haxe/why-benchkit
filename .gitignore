@@ -1,3 +1,5 @@
 FRAMEWORK_ROADMAP.md
 # Local travix override (points at a sibling checkout). Do not commit.
 haxe_libraries/travix.hxml
+# Haxe compiler dump output (e.g. -D dump=pretty).
+dump/

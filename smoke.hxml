@@ -1,0 +1,6 @@
+# Phase 1 smoke: Bench.measure on interp.
+# Usage: haxe smoke.hxml
+-cp src
+-cp tests
+-main Smoke
+--interp
