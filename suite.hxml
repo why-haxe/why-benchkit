@@ -1,0 +1,7 @@
+# Phase 2 smoke: Bench.suite / suite.run on interp (travix.Logger summary).
+# Usage: haxe suite.hxml
+-cp src
+-cp tests
+-lib travix
+-main SuiteSmoke
+--interp

@@ -2,5 +2,6 @@
 # Usage: haxe smoke.hxml
 -cp src
 -cp tests
+-lib travix
 -main Smoke
 --interp
