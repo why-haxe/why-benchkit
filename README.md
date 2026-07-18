@@ -3,6 +3,8 @@
 Micro-benchmark suite API and multi-target host runner for [Haxe](https://haxe.org/).
 Haxe package: `why.benchkit`. Target install/compile/run is delegated to [travix](https://github.com/back2dos/travix).
 
+Reporting finishes in the suite process. The host only orchestrates travix runs and injects reporter config.
+
 ## Install
 
 **haxelib**
@@ -25,14 +27,14 @@ haxelib dev why-benchkit /path/to/why-benchkit
 # or with lix, point haxe_libraries/why-benchkit.hxml at this repo
 ```
 
-Requires Haxe 4.3+ (see `.haxerc`). Declares `travix`, `tink_cli`, and `hx3compat` in `haxelib.json`.
+Requires Haxe 4.3+ (see `.haxerc`). Declares `why-unit`, `travix`, `tink_cli`, and `hx3compat` in `haxelib.json`.
 
 ## Suite API
 
 In the consumer project:
 
 1. Depend on `why-benchkit` and install your project dependencies yourself.
-2. Add a `bench.hxml` with `-lib why-benchkit` and a `-main` that calls `suite.run()`:
+2. Add a `bench.hxml` with `-lib why-benchkit` and a `-main` that calls `Runner.run`:
 
 ```hxml
 # bench.hxml
@@ -42,36 +44,58 @@ In the consumer project:
 ```
 
 ```haxe
-import why.benchkit.Bench;
+import why.benchkit.Runner;
 
 class BenchSuite {
-  static function main() {
-    final suite = Bench.suite({
-      name: "my_lib",
-      warmup: 50,
-      iterations: 10_000,
-    });
+	static function main() {
+		Runner.run([
+			new MySuite(),
+		]);
+	}
+}
 
-    suite.bench("op.name", () -> {
-      return doWork(); // return a value so DCE cannot erase the work
-    });
+@:name("my_lib") // optional: defaults to class name
+class MySuite {
+	public function new() {}
 
-    suite.bench("op.hot", () -> hot(), {
-      iterations: 50_000,
-      warmup: 100,
-    });
-
-    suite.run(); // standalone: console + optional --json; under host: hand off results
-  }
+	@:warmup(50) // optional: overrides default
+	@:iterations(100000) // optional: overrides default
+	@:name("do-work") // optional: defaults to method name
+	public function doWork() {
+		return work(); // return a value so DCE cannot erase the work
+	}
 }
 ```
+
+The macro discovers each suite’s public instance methods and treats them as measure items.
 
 Low-level escape hatch:
 
 ```haxe
-final r = Bench.measure(() -> work(), { iterations: 1000, warmup: 10 });
-// r.totalSeconds, r.opsPerSec, r.iterations
+import why.benchkit.Measure;
+
+final r = Measure.run(() -> work(), { name: "op", iterations: 1000, warmup: 10 });
+// r.name, r.duration (why.unit.time.Millisecond)
 ```
+
+## Reporter config
+
+At the start of `Runner.run`, reporters are loaded from config:
+
+- **Native / node:** `WHY_BENCHKIT_CONFIG` (JSON string)
+- **Browser `js`:** `window.why.benchkit` (same shape; injected by packaged travix hooks)
+- **Missing / empty:** default `{ "reporters": [{ "name": "console" }] }`
+
+```json
+{
+  "reporters": [
+    { "name": "console" },
+    { "name": "json", "outputPath": "out/js.json" }
+  ]
+}
+```
+
+Each reporter’s `report(result:BenchmarkResult)` runs in the suite process. There is no result handoff back to the host.
 
 ## Host runner (multi-target)
 
@@ -91,53 +115,51 @@ Single-target:
 haxelib run why-benchkit run --targets interp --json-dir out/
 ```
 
-Per target, the host runs travix `install()` + `buildAndRun()` against `bench.hxml` (`TRAVIX_HXML`). The suite hands back a result document; the host runs reporters (console always; JSON files when `--json-dir` is set). Install haxelib/lix project deps before invoking the host.
+Per target, the host runs travix `install()` + `buildAndRun()` against `bench.hxml` (`TRAVIX_HXML`), and sets `WHY_BENCHKIT_CONFIG` so the suite reports itself (console always; plus a JSON file under `--json-dir` when requested). Install haxelib/lix project deps before invoking the host.
 
 ## JSON output
-
-**Suite process** (standalone, one compiled target) — console summary; optional file on sys / `node` / browser:
-
-```bash
-# filesystem write (exact invocation depends on how you compile/run the suite)
-./suite --json out/node.json
-```
 
 **Host** — one JSON file per target (recommended; works for browser `js` too):
 
 ```bash
 haxelib run why-benchkit run --targets node,js --json-dir out/
 # → out/node.json, out/js.json
+# (CLI target id in the filename; e.g. --targets interp → out/interp.json)
 ```
 
-The host sets `WHY_BENCHKIT_RESULT` so the suite emits a handoff file (browser: `window.benchkitComplete(object)` via packaged hooks). Reporters run in the host process.
+**Standalone** — set `WHY_BENCHKIT_CONFIG` yourself before running the compiled suite (browser: inject `window.why.benchkit`).
 
-Suggested shape:
+Document shape:
 
 ```json
 {
-  "suite": "my_lib",
-  "target": "node",
   "haxeVersion": "4.3.x",
-  "timestamp": "2026-07-17T12:00:00Z",
+  "target": "js",
+  "timestamp": "2026-07-18T12:00:00Z",
   "results": [
     {
-      "name": "op.name",
-      "iterations": 10000,
-      "warmup": 50,
-      "totalMs": 12.3,
-      "opsPerSec": 81234.0
+      "name": "my_lib",
+      "results": [
+        {
+          "name": "do-work",
+          "duration": 12.3
+        }
+      ]
     }
   ]
 }
 ```
 
+Document `target` is the compile-time define `target.name` (e.g. `"eval"` under `--interp`, `"js"` for JS) — not necessarily the same string as the CLI/`--json-dir` filename. `duration` is milliseconds (`why.unit.time.Millisecond`), serialized as a JSON number.
+
 ## Browser JS (`TRAVIX_CONFIG_DIR`)
 
-For target `js`, travix runs the suite in a browser (puppeteer). Result handoff uses a host bridge:
+For target `js`, travix runs the suite in a browser (puppeteer). Config inject uses packaged hooks:
 
 1. This package ships hooks at `.travix/js/hooks.js`.
 2. Before `JsCommand.buildAndRun`, the host sets `TRAVIX_CONFIG_DIR` to the **absolute** path of that packaged `.travix/` directory.
-3. When `WHY_BENCHKIT_RESULT` is set, hooks expose `window.benchkitComplete(result)` (prefer a plain object) and set `window.benchkitResultPath`.
+3. Hooks read `WHY_BENCHKIT_CONFIG` and set `window.why.benchkit` before page scripts run.
+4. `window.benchkitWriteFile(path, content)` remains available so browser `JsonReporter` can write `outputPath` on the host filesystem.
 
 `TRAVIX_CONFIG_DIR` **replaces** the consumer’s cwd `.travix` for that run (not a merge). You do not need to write into the consumer’s `.travix/`, and you should not use deprecated `bin/js/run.js` / `run.html` overrides.
 

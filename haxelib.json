@@ -8,7 +8,7 @@
 	"main": "why.benchkit.Run",
 	"tags": ["benchmark", "performance", "cross", "travix"],
 	"contributors": ["kevinresol"],
-	"releasenote": "Initial release: Bench.suite / measure, JSON output, and multi-target host run via travix (including browser js hooks).",
+	"releasenote": "Initial release: Runner macro suites, config-driven reporters, and multi-target host run via travix (including browser js config inject).",
 	"dependencies": {
 		"why-unit": "",
 		"travix": "",

@@ -28,7 +28,7 @@ for path in \
   haxelib.json \
   README.md \
   src/why/benchkit/Run.hx \
-  src/why/benchkit/Bench.hx \
+  src/why/benchkit/Runner.hx \
   .travix/js/hooks.js \
   .travix/README.md
 do
@@ -50,6 +50,7 @@ info = json.loads(z.read("haxelib.json"))
 assert info.get("classPath") == "src", info.get("classPath")
 assert info.get("main") == "why.benchkit.Run", info.get("main")
 deps = info.get("dependencies") or {}
+assert "why-unit" in deps, deps
 assert "travix" in deps, deps
 assert "tink_cli" in deps, deps
 assert "hx3compat" in deps, deps
@@ -58,6 +59,7 @@ assert ".travix" in release, release
 assert "Run.hx" not in release, release
 names = set(z.namelist())
 assert ".travix/js/hooks.js" in names, sorted(n for n in names if "travix" in n or "hooks" in n)
+assert "src/why/benchkit/Runner.hx" in names, sorted(n for n in names if "Runner" in n)
 print("ok: classPath=src, main=why.benchkit.Run, deps, travix.release.files, hooks present")
 PY
 
