@@ -4,9 +4,7 @@ import why.benchkit.Runner;
 
 class Bench {
 	public static function main():Void {
-		Runner.run([
-			new MyLibSuite(),
-		]);
+		Runner.run([new MyLibSuite(), new Fibonacci()]);
 	}
 }
 
@@ -34,5 +32,19 @@ class MyLibSuite {
 
 	function hot():String {
 		return haxe.Json.stringify({"foo": "bar"});
+	}
+}
+
+class Fibonacci {
+	public function new() {}
+
+	public function fibonacci():Int {
+		return doFibonacci(20);
+	}
+
+	static function doFibonacci(i:Int):Int {
+		if (i < 2)
+			return i;
+		return doFibonacci(i - 1) + doFibonacci(i - 2);
 	}
 }
