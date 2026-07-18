@@ -16,7 +16,7 @@ class HostRunCommand {
 	public var targets:Targets;
 
 	/**
-		Directory for per-target JSON reporter output (wired in Chunk 07 via config inject)
+		Directory for per-target JSON output (`<dir>/<target>.json` via suite config inject)
 	**/
 	@:flag('json-dir')
 	@:alias(false)
