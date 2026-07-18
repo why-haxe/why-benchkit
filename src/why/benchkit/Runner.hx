@@ -47,6 +47,7 @@ class Runner {
 			target: BenchmarkMeta.target(),
 			timestamp: Date.now().getTime(),
 			results: suiteResults,
+			commitHash: BenchmarkMeta.gitHash(),
 		};
 
 		var exitCode = 0;

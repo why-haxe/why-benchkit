@@ -8,4 +8,5 @@ typedef BenchmarkResult = {
 	final target:String;
 	final timestamp:Float;
 	final results:Array<SuiteResult>;
+	final commitHash:String;
 }

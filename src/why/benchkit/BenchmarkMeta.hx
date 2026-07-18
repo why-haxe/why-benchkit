@@ -17,4 +17,6 @@ class BenchmarkMeta {
 	public static function target():String {
 		return Compiler.getDefine('target.name');
 	}
+
+	public static macro function gitHash();
 }

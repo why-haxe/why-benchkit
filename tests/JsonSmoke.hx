@@ -48,8 +48,9 @@ class JsonSmoke {
 		final envDoc:BenchmarkResult = {
 			haxeVersion: "test",
 			target: "eval",
-			timestamp: "1970-01-01T00:00:00Z",
+			timestamp: 0,
 			results: [],
+			commitHash: "deadbeef",
 		};
 		for (r in fromEnv)
 			r.report(envDoc);
@@ -92,7 +93,7 @@ class JsonSmoke {
 		final doc:BenchmarkResult = {
 			haxeVersion: BenchmarkMeta.haxeVersion(),
 			target: BenchmarkMeta.target(),
-			timestamp: Date.fromTime(0),
+			timestamp: 0,
 			results: [
 				{
 					name: "json_smoke",
@@ -100,10 +101,13 @@ class JsonSmoke {
 						{
 							name: "nop",
 							duration: new Millisecond(1.5),
+							iterations: 1,
+							warmup: 0,
 						},
 					],
 				},
 			],
+			commitHash: BenchmarkMeta.gitHash(),
 		};
 
 		final reporter:Reporter = new JsonReporter(outPath);
@@ -118,8 +122,10 @@ class JsonSmoke {
 		// `--interp` sets define target.name to "eval".
 		if (roundtrip.target != "eval")
 			throw 'JsonSmoke: expected target eval, got ${roundtrip.target}';
-		if (roundtrip.timestamp != "1970-01-01T00:00:00Z")
+		if (roundtrip.timestamp != 0)
 			throw 'JsonSmoke: bad timestamp ${roundtrip.timestamp}';
+		if (roundtrip.commitHash == null || roundtrip.commitHash == "")
+			throw 'JsonSmoke: bad commitHash ${roundtrip.commitHash}';
 		if (roundtrip.results == null || roundtrip.results.length != 1)
 			throw 'JsonSmoke: results length ${roundtrip.results == null ? "null" : Std.string(roundtrip.results.length)}';
 		final suite0 = roundtrip.results[0];
@@ -132,11 +138,13 @@ class JsonSmoke {
 			throw 'JsonSmoke: measure name ${m0.name}';
 		if (!Math.isFinite(m0.duration) || m0.duration != 1.5)
 			throw 'JsonSmoke: bad duration ${m0.duration}';
-		// New shape: no flat suite / iterations / warmup / opsPerSec / totalMs fields.
+		if (m0.iterations != 1 || m0.warmup != 0)
+			throw 'JsonSmoke: bad iterations/warmup ${m0.iterations}/${m0.warmup}';
+		// New shape: no flat suite / opsPerSec / totalMs fields.
 		if (Reflect.hasField(roundtrip, "suite"))
 			throw "JsonSmoke: JSON should omit flat suite field";
-		if (Reflect.hasField(m0, "totalMs") || Reflect.hasField(m0, "iterations") || Reflect.hasField(m0, "opsPerSec"))
-			throw "JsonSmoke: measure should be name + duration only";
+		if (Reflect.hasField(m0, "totalMs") || Reflect.hasField(m0, "opsPerSec"))
+			throw "JsonSmoke: measure should omit totalMs / opsPerSec";
 
 		Sys.println('JsonSmoke wrote $outPath (haxe ${roundtrip.haxeVersion}, target ${roundtrip.target})');
 	}
