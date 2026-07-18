@@ -10,8 +10,8 @@ import why.benchkit.reporter.JsonReporter;
 	```json
 	{
 	  "reporters": [
-	    { "name": "console" },
-	    { "name": "json", "outputPath": "out/js.json" }
+		{ "name": "console" },
+		{ "name": "json", "outputPath": "out/js.json" }
 	  ]
 	}
 	```
@@ -140,6 +140,14 @@ class Config {
 	#if (js && !nodejs)
 	static function readBrowser():Null<Any> {
 		// Injected by packaged travix hooks: window.why.benchkit
+
+		try {
+			final config = untyped js.Browser.window.why.benchkit;
+			travix.Logger.println('config: ${haxe.Json.stringify(config)}');
+		} catch (e:Dynamic) {
+			travix.Logger.println('error: ${Std.string(e)}');
+		}
+
 		final why:Dynamic = untyped js.Browser.window.why;
 		if (why == null)
 			return null;

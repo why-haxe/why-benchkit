@@ -17,7 +17,7 @@ class JsonReporter implements Reporter {
 
 	public function report(result:BenchmarkResult):Void {
 		ensureParentDir(outputPath);
-		JsonWriter.write(outputPath, Json.stringify(result));
+		write(outputPath, Json.stringify(result));
 	}
 
 	static function ensureParentDir(filePath:String):Void {
@@ -30,6 +30,21 @@ class JsonReporter implements Reporter {
 		ensureParentDir(parent);
 		if (!sys.FileSystem.exists(parent))
 			sys.FileSystem.createDirectory(parent);
+		#end
+	}
+
+	static function write(path:String, content:String):Void {
+		#if (js && !nodejs)
+		travix.Logger.println('js write');
+		switch untyped js.Browser.window.benchkitWriteFile {
+			case null:
+				throw "why.benchkit: window.benchkitWriteFile is not available "
+					+ "(set TRAVIX_CONFIG_DIR to the absolute packaged .travix/ path; see .travix/README.md)";
+			case f:
+				f(path, content);
+		}
+		#else
+		sys.io.File.saveContent(path, content);
 		#end
 	}
 }
