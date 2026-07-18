@@ -1,9 +1,9 @@
 package why.benchkit;
 
 /**
-	In-memory suite outcome from `Suite.run` (console + JSON).
+	Outcome of one suite: name plus its measurements.
 **/
 typedef SuiteResult = {
 	final name:String;
-	final results:Array<BenchCaseResult>;
+	final results:Array<MeasureResult>;
 }

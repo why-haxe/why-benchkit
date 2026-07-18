@@ -47,26 +47,24 @@ class Suite {
 		Skips exit when `opts.exit` is `false` (tests / embedding).
 	**/
 	public function run(?opts:SuiteRunOptions):SuiteResult {
-		final results:Array<BenchCaseResult> = [];
+		final results:Array<MeasureResult> = [];
 		for (c in cases) {
-			final m = Measure.run(c.fn, {
+			results.push(Measure.run(c.fn, {
+				name: c.name,
 				iterations: c.iterations,
 				warmup: c.warmup,
-			});
-			results.push({
-				name: c.name,
-				iterations: m.iterations,
-				warmup: m.warmup,
-				totalSeconds: m.totalSeconds,
-				totalMs: m.totalMs,
-				opsPerSec: m.opsPerSec,
-			});
+			}));
 		}
 		final suiteResult:SuiteResult = {
 			name: name,
 			results: results,
 		};
-		final doc = SuiteJson.fromSuiteResult(suiteResult);
+		final doc:BenchmarkResult = {
+			haxeVersion: BenchmarkMeta.haxeVersion(),
+			target: BenchmarkMeta.target(),
+			timestamp: BenchmarkMeta.timestampNow(),
+			results: [suiteResult],
+		};
 
 		var exitCode = 0;
 		try {

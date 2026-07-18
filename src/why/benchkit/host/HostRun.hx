@@ -6,8 +6,8 @@ import sys.FileSystem;
 import sys.io.File;
 import travix.Travix;
 import why.benchkit.BenchkitEnv;
+import why.benchkit.BenchmarkResult;
 import why.benchkit.Reporter;
-import why.benchkit.SuiteJsonDocument;
 import why.benchkit.host.Targets;
 
 /**
@@ -17,7 +17,7 @@ import why.benchkit.host.Targets;
 
 	Uses `bench.hxml` in the consumer project cwd (`TRAVIX_HXML`) with a
 	`-main` class that builds and calls `suite.run()`. Under the host, the suite
-	hands off a `SuiteJsonDocument` via `WHY_BENCHKIT_RESULT` (browser: object
+	hands off a `BenchmarkResult` via `WHY_BENCHKIT_RESULT` (browser: object
 	through `window.benchkitComplete`); the host runs reporters.
 
 	The consumer is responsible for installing project dependencies before
@@ -106,11 +106,11 @@ class HostRun {
 		@:privateAccess Travix.TESTS = BENCH_HXML;
 	}
 
-	static function readResult(path:String):SuiteJsonDocument {
+	static function readResult(path:String):BenchmarkResult {
 		if (!FileSystem.exists(path))
 			throw 'why-benchkit: missing suite result handoff at $path';
 		final raw = File.getContent(path);
-		return (Json.parse(raw) : SuiteJsonDocument);
+		return (Json.parse(raw) : BenchmarkResult);
 	}
 
 	static function ensureDir(dir:String):Void {

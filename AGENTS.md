@@ -7,6 +7,7 @@ Prefer modern Haxe syntax where it fits:
 - Use `final` for readonly fields and locals that are not reassigned.
 - Prefer arrow function expressions (`() -> …`) for short callbacks and lambdas.
 - Prefer named-argument function types (`(name:Type) -> Ret`) over positional-only forms when declaring function types.
+- Use type-safe values from `why-unit` library where applicable
 
 ### Explicit member types
 

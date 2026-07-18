@@ -11,14 +11,14 @@ import why.benchkit.reporter.JsonWriter;
 class ResultBridge {
 	function new() {}
 
-	public static function emit(doc:SuiteJsonDocument):Void {
+	public static function emit(result:BenchmarkResult):Void {
 		#if (js && !nodejs)
-		completeBrowser(doc);
+		completeBrowser(result);
 		#else
 		final path = resultPath();
 		if (path == null || path.length == 0)
 			throw 'why.benchkit: ${BenchkitEnv.RESULT_PATH} is not set';
-		JsonWriter.write(path, Json.stringify(doc));
+		JsonWriter.write(path, Json.stringify(result));
 		#end
 	}
 
@@ -41,14 +41,14 @@ class ResultBridge {
 	}
 
 	#if (js && !nodejs)
-	static function completeBrowser(doc:SuiteJsonDocument):Void {
+	static function completeBrowser(result:BenchmarkResult):Void {
 		final complete:Null<(result:Dynamic) -> Void> = untyped js.Browser.window.benchkitComplete;
 		if (complete == null) {
 			throw "why.benchkit: window.benchkitComplete is not available "
 				+ "(host must set TRAVIX_CONFIG_DIR to packaged .travix/; see .travix/README.md)";
 		}
 		// Puppeteer JSON-clones plain objects across the bridge.
-		complete(doc);
+		complete(result);
 	}
 	#end
 }

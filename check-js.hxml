@@ -2,6 +2,7 @@
 # Usage: haxe check-js.hxml
 -cp src
 -lib travix
+-lib why-unit
 -js dump/check-js.js
 --no-output
 why.benchkit.Bench

@@ -1,14 +1,11 @@
 package why.benchkit;
 
-import why.unit.time.*;
+import why.unit.time.Millisecond;
 
 /**
-	Timing result from `Bench.measure`.
-	Fields align with the suite JSON shape (`totalMs`, `opsPerSec`, `iterations`, `warmup`).
+	Timing result for one named measurement.
 **/
 typedef MeasureResult = {
-	final iterations:Int;
-	final warmup:Int;
+	final name:String;
 	final duration:Millisecond;
-	final opsPerSec:Float;
 }

@@ -2,5 +2,6 @@
 # Usage: haxe check.hxml
 -cp src
 -lib travix
+-lib why-unit
 --no-output
 why.benchkit.Bench

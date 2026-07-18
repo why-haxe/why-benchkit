@@ -1,26 +1,23 @@
 package why.benchkit.reporter;
 
 import travix.Logger;
+import why.benchkit.BenchmarkResult;
 import why.benchkit.Reporter;
-import why.benchkit.SuiteJsonDocument;
 
 /**
-	Human-readable suite summary via `travix.Logger` (sys + browser JS).
+	Human-readable benchmark summary via `travix.Logger` (sys + browser JS).
 **/
 class ConsoleReporter implements Reporter {
 	public function new() {}
 
-	public function report(doc:SuiteJsonDocument):Void {
-		Logger.println('suite: ${doc.suite}  (${doc.target})');
-		for (r in doc.results) {
-			Logger.println('  ${r.name}  ${formatOps(r.opsPerSec)} ops/sec  (${formatMs(r.totalMs)} ms, ${r.iterations} iter, ${r.warmup} warmup)');
+	public function report(result:BenchmarkResult):Void {
+		Logger.println('benchmark  (${result.target}, haxe ${result.haxeVersion})');
+		for (suite in result.results) {
+			Logger.println('suite: ${suite.name}');
+			for (m in suite.results) {
+				Logger.println('  ${m.name}  ${formatMs(m.duration.toFloat())} ms');
+			}
 		}
-	}
-
-	static function formatOps(opsPerSec:Float):String {
-		if (!Math.isFinite(opsPerSec))
-			return Std.string(opsPerSec);
-		return Std.string(Math.round(opsPerSec * 100) / 100);
 	}
 
 	static function formatMs(totalMs:Float):String {

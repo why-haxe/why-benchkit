@@ -1,6 +1,7 @@
 package why.benchkit;
 
 import haxe.Timer;
+import why.unit.time.Millisecond;
 
 /**
 	Shared measure loop used by `Bench.measure` and `Suite.run`.
@@ -12,6 +13,7 @@ class Measure {
 	function new() {}
 
 	public static function run<T>(fn:() -> T, ?opts:MeasureOptions):MeasureResult {
+		final name = opts?.name ?? "";
 		final iterations = opts?.iterations ?? DEFAULT_ITERATIONS;
 		final warmup = opts?.warmup ?? DEFAULT_WARMUP;
 
@@ -26,17 +28,11 @@ class Measure {
 		final start = Timer.stamp();
 		for (_ in 0...iterations)
 			Sink.blackHole(fn());
-		final totalSeconds = Timer.stamp() - start;
-		final totalMs = totalSeconds * 1000.0;
-		// Zero-duration can happen with coarse timers + tiny work; report Infinity rather than NaN.
-		final opsPerSec = if (totalSeconds > 0) iterations / totalSeconds else Math.POSITIVE_INFINITY;
+		final totalMs = (Timer.stamp() - start) * 1000.0;
 
 		return {
-			iterations: iterations,
-			warmup: warmup,
-			totalSeconds: totalSeconds,
-			totalMs: totalMs,
-			opsPerSec: opsPerSec,
+			name: name,
+			duration: new Millisecond(totalMs),
 		};
 	}
 }

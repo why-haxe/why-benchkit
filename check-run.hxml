@@ -4,6 +4,7 @@
 # Usage: haxe check-run.hxml
 -cp src
 -lib travix
+-lib why-unit
 -lib tink_cli
 -lib hx3compat
 -D no-deprecation-warnings

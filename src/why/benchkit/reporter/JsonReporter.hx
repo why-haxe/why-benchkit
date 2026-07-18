@@ -2,16 +2,16 @@ package why.benchkit.reporter;
 
 import haxe.Json;
 import haxe.io.Path;
+import why.benchkit.BenchmarkResult;
 import why.benchkit.Reporter;
-import why.benchkit.SuiteJsonDocument;
 
 /**
-	Write suite JSON via `JsonWriter` (sys / node filesystem, or browser bridge).
+	Write benchmark JSON via `JsonWriter` (sys / node filesystem, or browser bridge).
 **/
 class JsonReporter implements Reporter {
-	final resolvePath:(doc:SuiteJsonDocument) -> String;
+	final resolvePath:(result:BenchmarkResult) -> String;
 
-	public function new(resolvePath:(doc:SuiteJsonDocument) -> String) {
+	public function new(resolvePath:(result:BenchmarkResult) -> String) {
 		this.resolvePath = resolvePath;
 	}
 
@@ -20,15 +20,15 @@ class JsonReporter implements Reporter {
 		return new JsonReporter(_ -> path);
 	}
 
-	/** Write `<dir>/<doc.target>.json` (host `--json-dir`). */
+	/** Write `<dir>/<result.target>.json` (host `--json-dir`). */
 	public static function toDir(dir:String):JsonReporter {
-		return new JsonReporter(doc -> Path.join([dir, '${doc.target}.json']));
+		return new JsonReporter(result -> Path.join([dir, '${result.target}.json']));
 	}
 
-	public function report(doc:SuiteJsonDocument):Void {
-		final path = resolvePath(doc);
+	public function report(result:BenchmarkResult):Void {
+		final path = resolvePath(result);
 		ensureParentDir(path);
-		JsonWriter.write(path, Json.stringify(doc));
+		JsonWriter.write(path, Json.stringify(result));
 	}
 
 	static function ensureParentDir(filePath:String):Void {

@@ -13,7 +13,7 @@ class BenchkitEnv {
 	public static final JSON_PATH:String = 'WHY_BENCHKIT_JSON';
 
 	/**
-		Absolute path where the suite must hand off `SuiteJsonDocument` JSON
+		Absolute path where the suite must hand off `BenchmarkResult` JSON
 		when driven by the host multi-target runner. When set, `Suite.run`
 		skips local reporters and uses `ResultBridge.emit`.
 		Browser `js`: hooks also set `window.benchkitResultPath` from this.
