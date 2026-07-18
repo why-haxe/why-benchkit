@@ -1,11 +1,12 @@
 # Verify the haxelib / lix run entry compiles via `--run` (same path as `haxelib run`).
-# Avoid `--no-output -main Run`: tink_cli macros on travix.Travix error under that mode.
+# Avoid `--no-output -main`: tink_cli macros can error under that mode.
 # hx3compat: travix.AuthCommand still references haxe.remoting.HttpConnection.
 # Usage: haxe check-run.hxml
--cp .
 -cp src
 -lib travix
+-lib tink_cli
 -lib hx3compat
 -D no-deprecation-warnings
--D why_benchkit_check_run
---run Run
+--run
+why.benchkit.Run
+help

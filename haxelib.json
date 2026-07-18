@@ -11,11 +11,12 @@
 	"releasenote": "Initial release: Bench.suite / measure, JSON output, and multi-target host run via travix (including browser js hooks).",
 	"dependencies": {
 		"travix": "",
+		"tink_cli": "",
 		"hx3compat": ""
 	},
 	"travix": {
 		"release": {
-			"files": ["haxelib.json", "README.md", "Run.hx", "src", ".travix"]
+			"files": ["haxelib.json", "README.md", "src", ".travix"]
 		}
 	}
 }

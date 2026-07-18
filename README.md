@@ -25,13 +25,13 @@ haxelib dev why-benchkit /path/to/why-benchkit
 # or with lix, point haxe_libraries/why-benchkit.hxml at this repo
 ```
 
-Requires Haxe 4.3+ (see `.haxerc`). Declares `travix` (and `hx3compat`) in `haxelib.json`.
+Requires Haxe 4.3+ (see `.haxerc`). Declares `travix`, `tink_cli`, and `hx3compat` in `haxelib.json`.
 
 ## Suite API
 
 In the consumer project:
 
-1. Depend on `why-benchkit` (and keep a root `haxelib.json` so travix `InstallCommand` can install deps).
+1. Depend on `why-benchkit` and install your project dependencies yourself.
 2. Add a travix-style `tests.hxml` with `-lib why-benchkit` and a `-main` that calls `suite.run()`:
 
 ```hxml
@@ -91,7 +91,7 @@ Single-target:
 haxelib run why-benchkit run --targets interp --json-dir out/
 ```
 
-The host installs shared deps, then per target runs travix `install()` + `buildAndRun()` against `tests.hxml`.
+Per target, the host runs travix `install()` (toolchain) + `buildAndRun()` against `tests.hxml`. Install haxelib/lix project deps before invoking the host.
 
 ## JSON output
 
@@ -155,4 +155,4 @@ Details: [`.travix/README.md`](.travix/README.md).
 haxelib submit why-benchkit.zip
 ```
 
-or travix release, which uses `travix.release.files` in `haxelib.json` (lists `.travix` explicitly). The zip must contain `src/`, `Run.hx`, `haxelib.json`, `README.md`, and `.travix/js/hooks.js`.
+or travix release, which uses `travix.release.files` in `haxelib.json` (lists `.travix` explicitly). The zip must contain `src/` (including `why.benchkit.Run`), `haxelib.json`, `README.md`, and `.travix/js/hooks.js`.

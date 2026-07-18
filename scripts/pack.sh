@@ -15,7 +15,6 @@ rm -f "$OUT"
 zip -r "$OUT" \
   haxelib.json \
   README.md \
-  Run.hx \
   src \
   .travix \
   -x '*.DS_Store' \
@@ -28,7 +27,7 @@ missing=0
 for path in \
   haxelib.json \
   README.md \
-  Run.hx \
+  src/why/benchkit/Run.hx \
   src/why/benchkit/Bench.hx \
   .travix/js/hooks.js \
   .travix/README.md
@@ -49,15 +48,17 @@ import json, sys, zipfile
 z = zipfile.ZipFile(sys.argv[1])
 info = json.loads(z.read("haxelib.json"))
 assert info.get("classPath") == "src", info.get("classPath")
-assert info.get("main") == "Run", info.get("main")
+assert info.get("main") == "why.benchkit.Run", info.get("main")
 deps = info.get("dependencies") or {}
 assert "travix" in deps, deps
+assert "tink_cli" in deps, deps
 assert "hx3compat" in deps, deps
 release = ((info.get("travix") or {}).get("release") or {}).get("files") or []
 assert ".travix" in release, release
+assert "Run.hx" not in release, release
 names = set(z.namelist())
 assert ".travix/js/hooks.js" in names, sorted(n for n in names if "travix" in n or "hooks" in n)
-print("ok: classPath=src, main=Run, deps, travix.release.files, hooks present")
+print("ok: classPath=src, main=why.benchkit.Run, deps, travix.release.files, hooks present")
 PY
 
 echo "==> pack ok"
