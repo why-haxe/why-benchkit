@@ -1,4 +1,4 @@
-import why.benchkit.Bench;
+import why.benchkit.Runner;
 
 /**
 	Default suite entry for travix / `why-benchkit run` (`bench.hxml`).
@@ -6,19 +6,23 @@ import why.benchkit.Bench;
 **/
 class BenchSuite {
 	static function main():Void {
-		final suite = Bench.suite({
-			name: "why_benchkit",
-			warmup: 10,
-			iterations: 1_000,
-		});
+		Runner.run([
+			new WhyBenchkitSuite(),
+		]);
+	}
+}
 
-		suite.bench("sum.loop", () -> {
-			var sum = 0;
-			for (i in 0...100)
-				sum += i;
-			return sum;
-		});
+@:name("why_benchkit")
+class WhyBenchkitSuite {
+	public function new() {}
 
-		suite.run();
+	@:name("sum.loop")
+	@:warmup(10)
+	@:iterations(1000)
+	public function sumLoop():Int {
+		var sum = 0;
+		for (i in 0...100)
+			sum += i;
+		return sum;
 	}
 }

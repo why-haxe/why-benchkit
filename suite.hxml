@@ -1,7 +1,8 @@
-# Phase 2 smoke: Bench.suite / suite.run on interp (travix.Logger summary).
+# Runner DSL smoke on interp (`@:name` / `@:warmup` / `@:iterations`).
 # Usage: haxe suite.hxml
 -cp src
 -cp tests
 -lib travix
+-lib why-unit
 -main SuiteSmoke
 --interp

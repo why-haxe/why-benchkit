@@ -1,31 +1,38 @@
 package;
 
+import why.benchkit.Runner;
+
 class Bench {
-	public static function main() {
-		final suite = why.benchkit.Bench.suite({
-			name: "my_lib",
-			warmup: 50,
-			iterations: 10_000,
-		});
+	public static function main():Void {
+		Runner.run([
+			new MyLibSuite(),
+		]);
+	}
+}
 
-		suite.bench("op.name", () -> doWork(), {
-			iterations: 1_000_000,
-			warmup: 100,
-		});
+@:name("my_lib")
+class MyLibSuite {
+	public function new() {}
 
-		suite.bench("op.hot", () -> hot(), {
-			iterations: 1_000_000,
-			warmup: 100,
-		});
-
-		suite.run(); // always prints a summary; honors --json / host JSON env
+	@:name("op.name")
+	@:warmup(100)
+	@:iterations(1000000)
+	public function opName():Dynamic {
+		return doWork();
 	}
 
-	static function doWork() {
+	@:name("op.hot")
+	@:warmup(100)
+	@:iterations(1000000)
+	public function opHot():String {
+		return hot();
+	}
+
+	function doWork():Dynamic {
 		return haxe.Json.parse('{"foo": "bar"}');
 	}
 
-	static function hot() {
+	function hot():String {
 		return haxe.Json.stringify({"foo": "bar"});
 	}
 }

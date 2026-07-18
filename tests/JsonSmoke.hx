@@ -1,101 +1,146 @@
 import haxe.Json;
 import sys.FileSystem;
 import sys.io.File;
-import why.benchkit.Bench;
-import why.benchkit.ProcessFlags;
-import why.benchkit.SuiteJson;
-import why.benchkit.UtcIso;
+import why.benchkit.BenchkitEnv;
+import why.benchkit.BenchmarkMeta;
+import why.benchkit.BenchmarkResult;
+import why.benchkit.Config;
+import why.benchkit.Reporter;
+import why.benchkit.reporter.ConsoleReporter;
+import why.benchkit.reporter.JsonReporter;
+import why.unit.time.Millisecond;
 
 /**
-	Phase 3 smoke: `--json` parsing, serialization shape, Suite.run write on interp.
+	Config + JsonReporter smoke on interp (new `BenchmarkResult` shape).
 	Usage: haxe json.hxml
 **/
 class JsonSmoke {
 	static function main():Void {
-		final flags = ProcessFlags.parse(["--json", "out/example.json"]);
-		if (flags.jsonPath != "out/example.json")
-			throw 'JsonSmoke: expected jsonPath out/example.json, got ${flags.jsonPath}';
+		assertConfigParse();
+		assertJsonReporterWrite();
+		Sys.println("JsonSmoke ok");
+	}
+
+	static function assertConfigParse():Void {
+		final consoleOnly = Config.reportersFrom({
+			reporters: [{name: "console"}],
+		});
+		if (consoleOnly.length != 1)
+			throw 'JsonSmoke: expected 1 console reporter, got ${consoleOnly.length}';
+
+		if (!FileSystem.exists("dump"))
+			FileSystem.createDirectory("dump");
+		final outPath = "dump/json_smoke_config.json";
+		if (FileSystem.exists(outPath))
+			FileSystem.deleteFile(outPath);
+
+		Sys.putEnv(BenchkitEnv.CONFIG, Json.stringify({
+			reporters: [
+				{name: "console"},
+				{name: "json", outputPath: outPath},
+			],
+		}));
+		final fromEnv = Config.createReporters();
+		if (fromEnv.length != 2)
+			throw 'JsonSmoke: expected 2 reporters from env, got ${fromEnv.length}';
+		if (!Std.isOfType(fromEnv[0], ConsoleReporter))
+			throw "JsonSmoke: expected first env reporter to be ConsoleReporter";
+		if (!Std.isOfType(fromEnv[1], JsonReporter))
+			throw "JsonSmoke: expected second env reporter to be JsonReporter";
+
+		final envDoc:BenchmarkResult = {
+			haxeVersion: "test",
+			target: "eval",
+			timestamp: "1970-01-01T00:00:00Z",
+			results: [],
+		};
+		for (r in fromEnv)
+			r.report(envDoc);
+		if (!FileSystem.exists(outPath))
+			throw 'JsonSmoke: Config.createReporters JsonReporter did not write $outPath';
 
 		var threw = false;
 		try {
-			ProcessFlags.parse(["--json"]);
+			Config.reportersFrom({
+				reporters: [{name: "json"}],
+			});
 		} catch (e:Dynamic) {
 			threw = true;
 		}
 		if (!threw)
-			throw "JsonSmoke: expected --json without path to throw";
+			throw "JsonSmoke: expected json reporter without outputPath to throw";
 
 		threw = false;
 		try {
-			ProcessFlags.parse(["--json", ""]);
+			Config.reportersFrom({
+				reporters: [{name: "nope"}],
+			});
 		} catch (e:Dynamic) {
 			threw = true;
 		}
 		if (!threw)
-			throw "JsonSmoke: expected empty --json path to throw";
+			throw "JsonSmoke: expected unknown reporter to throw";
 
-		final none = ProcessFlags.parse(["--verbose", "x"]);
-		if (none.jsonPath != null)
-			throw "JsonSmoke: expected null jsonPath when --json absent";
+		// Clear so later steps do not inherit this config.
+		Sys.putEnv(BenchkitEnv.CONFIG, "");
+	}
 
-		final ts = UtcIso.format(Date.fromTime(0));
-		if (ts != "1970-01-01T00:00:00Z")
-			throw 'JsonSmoke: UtcIso epoch expected 1970-01-01T00:00:00Z, got $ts';
-
+	static function assertJsonReporterWrite():Void {
 		if (!FileSystem.exists("dump"))
 			FileSystem.createDirectory("dump");
 		final outPath = "dump/json_smoke.json";
 		if (FileSystem.exists(outPath))
 			FileSystem.deleteFile(outPath);
 
-		final suite = Bench.suite({
-			name: "json_smoke",
-			warmup: 5,
-			iterations: 200,
-		});
-		suite.bench("nop", () -> 1);
+		final doc:BenchmarkResult = {
+			haxeVersion: BenchmarkMeta.haxeVersion(),
+			target: BenchmarkMeta.target(),
+			timestamp: BenchmarkMeta.formatTimestamp(Date.fromTime(0)),
+			results: [
+				{
+					name: "json_smoke",
+					results: [
+						{
+							name: "nop",
+							duration: new Millisecond(1.5),
+						},
+					],
+				},
+			],
+		};
 
-		// Drive Suite.run's --json path via args override (avoids relying on Sys.args under --interp).
-		final result = suite.run({
-			exit: false,
-			args: ["--json", outPath],
-		});
+		final reporter:Reporter = new JsonReporter(outPath);
+		reporter.report(doc);
 
 		if (!FileSystem.exists(outPath))
-			throw 'JsonSmoke: Suite.run did not write $outPath';
+			throw 'JsonSmoke: JsonReporter did not write $outPath';
 
 		final roundtrip:Dynamic = Json.parse(File.getContent(outPath));
-		if (roundtrip.suite != "json_smoke")
-			throw 'JsonSmoke: file suite field ${roundtrip.suite}';
-		if (roundtrip.target != "interp")
-			throw 'JsonSmoke: expected target interp, got ${roundtrip.target}';
 		if (roundtrip.haxeVersion == null || roundtrip.haxeVersion == "" || roundtrip.haxeVersion == "unknown")
 			throw 'JsonSmoke: bad haxeVersion ${roundtrip.haxeVersion}';
-		if (roundtrip.results.length != 1)
-			throw 'JsonSmoke: results length ${roundtrip.results.length}';
-		final r0 = roundtrip.results[0];
-		if (r0.name != "nop" || r0.iterations != 200 || r0.warmup != 5)
-			throw 'JsonSmoke: bad result row ${r0.name}/${r0.iterations}/${r0.warmup}';
-		if (!Math.isFinite(r0.totalMs) || !Math.isFinite(r0.opsPerSec))
-			throw "JsonSmoke: non-finite timing in JSON case";
-		// Design shape: no totalSeconds in JSON results.
-		if (Reflect.hasField(r0, "totalSeconds"))
-			throw "JsonSmoke: JSON should omit totalSeconds";
-		if (roundtrip.timestamp == null || !~/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$/.match(roundtrip.timestamp))
+		// `--interp` sets define target.name to "eval".
+		if (roundtrip.target != "eval")
+			throw 'JsonSmoke: expected target eval, got ${roundtrip.target}';
+		if (roundtrip.timestamp != "1970-01-01T00:00:00Z")
 			throw 'JsonSmoke: bad timestamp ${roundtrip.timestamp}';
+		if (roundtrip.results == null || roundtrip.results.length != 1)
+			throw 'JsonSmoke: results length ${roundtrip.results == null ? "null" : Std.string(roundtrip.results.length)}';
+		final suite0 = roundtrip.results[0];
+		if (suite0.name != "json_smoke")
+			throw 'JsonSmoke: suite name ${suite0.name}';
+		if (suite0.results == null || suite0.results.length != 1)
+			throw 'JsonSmoke: measure count ${suite0.results == null ? "null" : Std.string(suite0.results.length)}';
+		final m0 = suite0.results[0];
+		if (m0.name != "nop")
+			throw 'JsonSmoke: measure name ${m0.name}';
+		if (!Math.isFinite(m0.duration) || m0.duration != 1.5)
+			throw 'JsonSmoke: bad duration ${m0.duration}';
+		// New shape: no flat suite / iterations / warmup / opsPerSec / totalMs fields.
+		if (Reflect.hasField(roundtrip, "suite"))
+			throw "JsonSmoke: JSON should omit flat suite field";
+		if (Reflect.hasField(m0, "totalMs") || Reflect.hasField(m0, "iterations") || Reflect.hasField(m0, "opsPerSec"))
+			throw "JsonSmoke: measure should be name + duration only";
 
-		final doc = SuiteJson.fromSuiteResult(result, "2026-07-17T12:00:00Z");
-		if (doc.timestamp != "2026-07-17T12:00:00Z")
-			throw 'JsonSmoke: fixed timestamp ${doc.timestamp}';
-		final encoded = SuiteJson.stringify(result, "2026-07-17T12:00:00Z");
-		final parsed:Dynamic = Json.parse(encoded);
-		if (parsed.suite != "json_smoke" || parsed.target != "interp")
-			throw "JsonSmoke: stringify/parse mismatch";
-		if (parsed.results[0].name != "nop")
-			throw "JsonSmoke: stringify missing results[0].name";
-		if (Reflect.hasField(parsed.results[0], "totalSeconds"))
-			throw "JsonSmoke: stringify should omit totalSeconds";
-
-		Sys.println('JsonSmoke ok (wrote $outPath, haxe ${roundtrip.haxeVersion}, target ${roundtrip.target})');
+		Sys.println('JsonSmoke wrote $outPath (haxe ${roundtrip.haxeVersion}, target ${roundtrip.target})');
 	}
 }

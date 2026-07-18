@@ -1,1 +1,1 @@
-{"haxeVersion":"4.3.7","results":[{"name":"op.name","iterations":1000000,"warmup":100,"totalMs":1247.40505218505859,"opsPerSec":801664.221455826773},{"name":"op.hot","iterations":1000000,"warmup":100,"totalMs":1502.16007232666016,"opsPerSec":665708.015026070876}],"target":"interp","suite":"my_lib","timestamp":"2026-07-18T11:29:29Z"}
+{"haxeVersion":"4.3.7","results":[{"name":"my_lib","results":[{"name":"op.name","duration":1273.8800048828125},{"name":"op.hot","duration":1824.70488548278809}]}],"target":"eval","timestamp":"2026-07-18T12:51:21Z"}

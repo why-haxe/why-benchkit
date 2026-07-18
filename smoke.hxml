@@ -1,7 +1,8 @@
-# Phase 1 smoke: Bench.measure on interp.
+# Measure-core smoke on interp.
 # Usage: haxe smoke.hxml
 -cp src
 -cp tests
 -lib travix
+-lib why-unit
 -main Smoke
 --interp
