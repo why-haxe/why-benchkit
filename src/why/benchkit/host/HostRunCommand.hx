@@ -1,8 +1,5 @@
 package why.benchkit.host;
 
-import why.benchkit.Reporter;
-import why.benchkit.reporter.ConsoleReporter;
-
 /**
 	`why-benchkit run` subcommand: run the consumer suite across targets via travix.
 **/
@@ -19,7 +16,7 @@ class HostRunCommand {
 	public var targets:Targets;
 
 	/**
-		Write `<dir>/<target>.json` per target after host receives suite handoff
+		Directory for per-target JSON reporter output (wired in Chunk 07 via config inject)
 	**/
 	@:flag('json-dir')
 	@:alias(false)
@@ -43,7 +40,6 @@ class HostRunCommand {
 				Sys.exit(1);
 				return;
 			}
-			final reporters:Array<Reporter> = [new ConsoleReporter()];
 			final jsonOutputDir = switch jsonDir {
 				case null | '':
 					null;
@@ -54,7 +50,7 @@ class HostRunCommand {
 					else
 						haxe.io.Path.normalize(absolutePath(trimmed));
 			};
-			HostRun.run(targets, reporters, libraryRoot, jsonOutputDir);
+			HostRun.run(targets, libraryRoot, jsonOutputDir);
 		} catch (e:Dynamic) {
 			Sys.println(Std.string(e));
 			Sys.exit(1);

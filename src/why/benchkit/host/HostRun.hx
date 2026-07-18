@@ -1,15 +1,9 @@
 package why.benchkit.host;
 
-import haxe.Json;
 import haxe.io.Path;
 import sys.FileSystem;
-import sys.io.File;
 import travix.Travix;
-import why.benchkit.BenchkitEnv;
-import why.benchkit.BenchmarkResult;
-import why.benchkit.Reporter;
 import why.benchkit.host.Targets;
-import why.benchkit.reporter.JsonReporter;
 
 /**
 	Host multi-target runner: per-target travix `install` + `buildAndRun`.
@@ -17,16 +11,14 @@ import why.benchkit.reporter.JsonReporter;
 	## Consumer suite entrypoint
 
 	Uses `bench.hxml` in the consumer project cwd (`TRAVIX_HXML`) with a
-	`-main` class that builds and calls `suite.run()`. Under the host, the suite
-	hands off a `BenchmarkResult` via `WHY_BENCHKIT_RESULT` (browser: object
-	through `window.benchkitComplete`); the host runs reporters.
+	`-main` class that calls `Runner.run([...])`. The suite process owns
+	reporting via `Config` / `WHY_BENCHKIT_CONFIG` (browser: `window.why.benchkit`).
 
 	The consumer is responsible for installing project dependencies before
 	invoking the host.
 
 	`--targets` is required (e.g. `--targets interp` or `--targets node,js`).
-	Standalone suite reporting uses `Config` / `WHY_BENCHKIT_CONFIG` (Chunk 03);
-	host still injects `WHY_BENCHKIT_RESULT` until Chunks 06/07.
+	Host config inject for reporters / `--json-dir` is Chunk 07.
 
 	Uses travix's Haxe API directly (no `haxelib run travix` fallback).
 **/
@@ -39,13 +31,10 @@ class HostRun {
 		Run the host orchestration. Exits the process on success (0) or after
 		printing errors. Travix commands call `Sys.exit` on toolchain/build
 		failure, which aborts remaining targets (same as `travix` CLI).
+
+		`jsonDir` is accepted for CLI compatibility; config inject lands in Chunk 07.
 	**/
-	public static function run(
-		targets:Targets,
-		reporters:Array<Reporter>,
-		libraryRoot:String,
-		?jsonDir:String
-	):Void {
+	public static function run(targets:Targets, libraryRoot:String, ?jsonDir:String):Void {
 		ensureBenchHxml();
 
 		final travixConfigDir = Path.normalize(Path.join([libraryRoot, '.travix']));
@@ -53,7 +42,7 @@ class HostRun {
 
 		if (!FileSystem.exists(benchHxml)) {
 			Sys.println('why-benchkit: missing $BENCH_HXML in ${Sys.getCwd()}');
-			Sys.println('Expected a suite hxml with `-main` calling suite.run().');
+			Sys.println('Expected a suite hxml with `-main` calling Runner.run([...]).');
 			Sys.exit(1);
 			return;
 		}
@@ -73,17 +62,9 @@ class HostRun {
 			}
 		}
 
-		final resultDir = Path.join([Sys.getCwd(), 'bin', 'benchkit-results']);
-		ensureDir(resultDir);
-
 		Sys.println('why-benchkit: running targets [${targets.join(", ")}]');
 
 		for (target in targets) {
-			final resultPath = Path.join([resultDir, '$target.json']);
-			Sys.putEnv(BenchkitEnv.RESULT_PATH, resultPath);
-			// Clear standalone JSON env so suite stays in host handoff mode only.
-			Sys.putEnv(BenchkitEnv.JSON_PATH, '');
-
 			if (target == Js) {
 				// Replaces cwd `.travix` for this run (not a merge). See `.travix/README.md`.
 				Sys.putEnv('TRAVIX_CONFIG_DIR', travixConfigDir);
@@ -92,17 +73,10 @@ class HostRun {
 			Sys.println('why-benchkit: target $target');
 			target.installAndRun([]);
 
-			final doc = readResult(resultPath);
-			for (r in reporters)
-				r.report(doc);
-			if (jsonDir != null && jsonDir != '')
-				new JsonReporter(Path.join([jsonDir, '${doc.target}.json'])).report(doc);
-
 			if (target == Js)
 				Sys.putEnv('TRAVIX_CONFIG_DIR', '');
 		}
 
-		Sys.putEnv(BenchkitEnv.RESULT_PATH, '');
 		Sys.exit(0);
 	}
 
@@ -113,25 +87,5 @@ class HostRun {
 	static function ensureBenchHxml():Void {
 		Sys.putEnv('TRAVIX_HXML', BENCH_HXML);
 		@:privateAccess Travix.TESTS = BENCH_HXML;
-	}
-
-	static function readResult(path:String):BenchmarkResult {
-		if (!FileSystem.exists(path))
-			throw 'why-benchkit: missing suite result handoff at $path';
-		final raw = File.getContent(path);
-		return (Json.parse(raw) : BenchmarkResult);
-	}
-
-	static function ensureDir(dir:String):Void {
-		final normalized = Path.normalize(dir);
-		if (FileSystem.exists(normalized)) {
-			if (!FileSystem.isDirectory(normalized))
-				throw 'why-benchkit: not a directory: $normalized';
-			return;
-		}
-		final parent = Path.directory(normalized);
-		if (parent != null && parent != '' && parent != normalized && !FileSystem.exists(parent))
-			ensureDir(parent);
-		FileSystem.createDirectory(normalized);
 	}
 }

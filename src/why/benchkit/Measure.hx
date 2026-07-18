@@ -4,7 +4,7 @@ import haxe.Timer;
 import why.unit.time.Millisecond;
 
 /**
-	Shared measure loop used by `Bench.measure` and `Suite.run`.
+	Shared measure loop used by `Runner` (and callable directly).
 **/
 class Measure {
 	public static inline final DEFAULT_ITERATIONS:Int = 1000;

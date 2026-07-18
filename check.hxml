@@ -4,5 +4,6 @@
 -lib travix
 -lib why-unit
 --no-output
-why.benchkit.Bench
 why.benchkit.Runner
+why.benchkit.Config
+why.benchkit.Measure

@@ -1,7 +1,7 @@
 package why.benchkit;
 
 /**
-	Options for `Bench.measure` / per-bench overrides.
+	Options for `Measure.run` (name, iterations, warmup).
 **/
 typedef MeasureOptions = {
 	/** Measurement name (defaults to empty when omitted). */
