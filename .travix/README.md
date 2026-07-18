@@ -1,7 +1,7 @@
 # Packaged travix config (browser JS)
 
-why-benchkit ships this `.travix/` tree so browser `js` suite runs can hand results
-back to the host (and optionally write JSON when run standalone) without forking
+why-benchkit ships this `.travix/` tree so browser `js` suite runs receive
+reporter config (and can write JSON via `JsonReporter`) without forking
 travix’s runner or writing into the consumer’s `.travix/`.
 
 ## `TRAVIX_CONFIG_DIR`
@@ -20,21 +20,22 @@ That value **replaces** the consumer cwd `.travix` for that run — it is not a 
 
 | File | Role |
 | ---- | ---- |
-| `js/hooks.js` | `beforeGoto(page)` exposes host bridges (see below). |
+| `js/hooks.js` | `beforeGoto(page)` injects config and file-write bridge (see below). |
 
-### Host mode (`WHY_BENCHKIT_RESULT`)
+### Config inject (`WHY_BENCHKIT_CONFIG`)
 
-When the host sets **`WHY_BENCHKIT_RESULT`**, hooks:
+When the host sets **`WHY_BENCHKIT_CONFIG`** (JSON), hooks parse it and set
+`window.why.benchkit` before page scripts run. The suite `Config.load` reads that
+object (same shape as native env). Reporting finishes in the suite process — there
+is no result handoff back to the host.
 
-1. Expose `window.benchkitComplete(result)` — prefer a plain object (Puppeteer JSON-clones it); a JSON string is also accepted. Writes to the result path on the host via `fs.writeFileSync`.
-2. Set `window.benchkitResultPath` so the suite enters handoff mode (skips local reporters).
+If the env var is missing or empty, `window.why.benchkit` is set to `null` and
+the suite defaults to the console reporter.
 
-The Haxe host then reads that file and runs reporters (console / `--json-dir`).
+### JsonReporter file writes
 
-### Standalone browser `--json`
-
-`window.benchkitWriteFile(path, content)` remains available so standalone suite
-`JsonWriter` / `JsonReporter` can persist `--json` output from the page.
+`window.benchkitWriteFile(path, content)` is always exposed so browser
+`JsonWriter` / `JsonReporter` can persist `outputPath` to the host filesystem.
 
 `benchkitWriteFile` paths are resolved on the **host** (Node) relative to process cwd — after `Run` switches cwd, that is the consumer project.
 

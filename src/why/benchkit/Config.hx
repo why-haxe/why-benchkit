@@ -33,7 +33,7 @@ typedef ReporterSpec = {
 	Load suite-process reporter config and build `Reporter` instances.
 
 	- Native / node: `WHY_BENCHKIT_CONFIG` env (JSON string)
-	- Browser `js`: `window.why.benchkit` (same shape; hook inject in Chunk 08)
+	- Browser `js`: `window.why.benchkit` (same shape; injected by `.travix/js/hooks.js`)
 	- Missing / empty: default `[{ "name": "console" }]`
 **/
 class Config {
@@ -139,7 +139,7 @@ class Config {
 
 	#if (js && !nodejs)
 	static function readBrowser():Null<Any> {
-		// Injected by travix hooks (Chunk 08): window.why.benchkit
+		// Injected by packaged travix hooks: window.why.benchkit
 		final why:Dynamic = untyped js.Browser.window.why;
 		if (why == null)
 			return null;

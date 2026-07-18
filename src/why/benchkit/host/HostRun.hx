@@ -17,7 +17,7 @@ import why.benchkit.host.Targets;
 	Uses `bench.hxml` in the consumer project cwd (`TRAVIX_HXML`) with a
 	`-main` class that calls `Runner.run([...])`. The suite process owns
 	reporting via `Config` / `WHY_BENCHKIT_CONFIG` (browser: `window.why.benchkit`,
-	injected from the same env by Chunk 08 hooks).
+	injected from the same env by packaged `.travix/js/hooks.js`).
 
 	The consumer is responsible for installing project dependencies before
 	invoking the host.
@@ -86,7 +86,7 @@ class HostRun {
 
 			if (target == Js) {
 				// Replaces cwd `.travix` for this run (not a merge). See `.travix/README.md`.
-				// Chunk 08 hooks read WHY_BENCHKIT_CONFIG from the host env.
+				// Hooks read WHY_BENCHKIT_CONFIG and inject window.why.benchkit.
 				Sys.putEnv('TRAVIX_CONFIG_DIR', travixConfigDir);
 			}
 
