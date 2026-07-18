@@ -74,7 +74,7 @@ class Suite {
 				final reporters:Array<Reporter> = [new ConsoleReporter()];
 				final flags = ProcessFlags.parse(opts?.args ?? ProcessArgs.get());
 				if (flags.jsonPath != null)
-					reporters.push(JsonReporter.toPath(flags.jsonPath));
+					reporters.push(new JsonReporter(flags.jsonPath));
 				for (r in reporters)
 					r.report(doc);
 			}

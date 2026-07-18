@@ -9,26 +9,15 @@ import why.benchkit.Reporter;
 	Write benchmark JSON via `JsonWriter` (sys / node filesystem, or browser bridge).
 **/
 class JsonReporter implements Reporter {
-	final resolvePath:(result:BenchmarkResult) -> String;
+	final outputPath:String;
 
-	public function new(resolvePath:(result:BenchmarkResult) -> String) {
-		this.resolvePath = resolvePath;
-	}
-
-	/** Write to a fixed path (standalone `--json <path>`). */
-	public static function toPath(path:String):JsonReporter {
-		return new JsonReporter(_ -> path);
-	}
-
-	/** Write `<dir>/<result.target>.json` (host `--json-dir`). */
-	public static function toDir(dir:String):JsonReporter {
-		return new JsonReporter(result -> Path.join([dir, '${result.target}.json']));
+	public function new(outputPath:String) {
+		this.outputPath = outputPath;
 	}
 
 	public function report(result:BenchmarkResult):Void {
-		final path = resolvePath(result);
-		ensureParentDir(path);
-		JsonWriter.write(path, Json.stringify(result));
+		ensureParentDir(outputPath);
+		JsonWriter.write(outputPath, Json.stringify(result));
 	}
 
 	static function ensureParentDir(filePath:String):Void {

@@ -9,6 +9,7 @@ import why.benchkit.BenchkitEnv;
 import why.benchkit.BenchmarkResult;
 import why.benchkit.Reporter;
 import why.benchkit.host.Targets;
+import why.benchkit.reporter.JsonReporter;
 
 /**
 	Host multi-target runner: per-target travix `install` + `buildAndRun`.
@@ -38,7 +39,12 @@ class HostRun {
 		printing errors. Travix commands call `Sys.exit` on toolchain/build
 		failure, which aborts remaining targets (same as `travix` CLI).
 	**/
-	public static function run(targets:Targets, reporters:Array<Reporter>, libraryRoot:String):Void {
+	public static function run(
+		targets:Targets,
+		reporters:Array<Reporter>,
+		libraryRoot:String,
+		?jsonDir:String
+	):Void {
 		ensureBenchHxml();
 
 		final travixConfigDir = Path.normalize(Path.join([libraryRoot, '.travix']));
@@ -88,6 +94,8 @@ class HostRun {
 			final doc = readResult(resultPath);
 			for (r in reporters)
 				r.report(doc);
+			if (jsonDir != null && jsonDir != '')
+				new JsonReporter(Path.join([jsonDir, '${doc.target}.json'])).report(doc);
 
 			if (target == Js)
 				Sys.putEnv('TRAVIX_CONFIG_DIR', '');
