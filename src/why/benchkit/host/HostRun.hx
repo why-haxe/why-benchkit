@@ -1,30 +1,36 @@
 package why.benchkit.host;
 
+import haxe.Json;
 import haxe.io.Path;
 import sys.FileSystem;
+import sys.io.File;
 import travix.Travix;
 import why.benchkit.BenchkitEnv;
+import why.benchkit.Reporter;
+import why.benchkit.SuiteJsonDocument;
+import why.benchkit.host.Targets;
 
 /**
 	Host multi-target runner: per-target travix `install` + `buildAndRun`.
 
 	## Consumer suite entrypoint
 
-	Uses travix's convention: a `tests.hxml` in the consumer project cwd with a
-	`-main` class that builds and calls `suite.run()` (which prints the summary
-	and honors `--json` / `WHY_BENCHKIT_JSON`).
+	Uses `bench.hxml` in the consumer project cwd (`TRAVIX_HXML`) with a
+	`-main` class that builds and calls `suite.run()`. Under the host, the suite
+	hands off a `SuiteJsonDocument` via `WHY_BENCHKIT_RESULT` (browser: object
+	through `window.benchkitComplete`); the host runs reporters.
 
 	The consumer is responsible for installing project dependencies before
 	invoking the host.
 
-	Single-target: pass one name in `--targets` (e.g. `--targets interp`).
-	You can also compile/run the suite yourself and pass `--json <path>` where
-	the target supports filesystem write (sys / node); browser `js` needs the
-	packaged hooks (`TRAVIX_CONFIG_DIR`) and `window.benchkitWriteFile`.
+	`--targets` is required (e.g. `--targets interp` or `--targets node,js`).
+	Standalone suite runs still honor `--json` / `WHY_BENCHKIT_JSON`.
 
 	Uses travix's Haxe API directly (no `haxelib run travix` fallback).
 **/
 class HostRun {
+	static final BENCH_HXML:String = 'bench.hxml';
+
 	function new() {}
 
 	/**
@@ -32,17 +38,20 @@ class HostRun {
 		printing errors. Travix commands call `Sys.exit` on toolchain/build
 		failure, which aborts remaining targets (same as `travix` CLI).
 	**/
-	public static function run(opts:HostOptions, libraryRoot:String):Void {
-		final travixConfigDir = Path.normalize(Path.join([libraryRoot, '.travix']));
+	public static function run(targets:Targets, reporters:Array<Reporter>, libraryRoot:String):Void {
+		ensureBenchHxml();
 
-		if (!FileSystem.exists(Travix.TESTS)) {
-			Sys.println('why-benchkit: missing ${Travix.TESTS} in ${Sys.getCwd()}');
-			Sys.println('Expected a travix-style suite hxml with `-main` calling suite.run().');
+		final travixConfigDir = Path.normalize(Path.join([libraryRoot, '.travix']));
+		final benchHxml = Path.join([Sys.getCwd(), BENCH_HXML]);
+
+		if (!FileSystem.exists(benchHxml)) {
+			Sys.println('why-benchkit: missing $BENCH_HXML in ${Sys.getCwd()}');
+			Sys.println('Expected a suite hxml with `-main` calling suite.run().');
 			Sys.exit(1);
 			return;
 		}
 
-		if (opts.targets.indexOf('js') >= 0) {
+		if (targets.indexOf(Js) >= 0) {
 			if (!FileSystem.exists(travixConfigDir) || !FileSystem.isDirectory(travixConfigDir)) {
 				Sys.println('why-benchkit: packaged travix config missing: $travixConfigDir');
 				Sys.println('Expected hooks at $travixConfigDir/js/hooks.js (set TRAVIX_CONFIG_DIR for js).');
@@ -57,68 +66,58 @@ class HostRun {
 			}
 		}
 
-		final jsonDirAbs:Null<String> = switch (opts.jsonDir) {
-			case null: null;
-			case dir:
-				final abs = absolutePath(dir);
-				ensureDir(abs);
-				abs;
-		};
+		final resultDir = Path.join([Sys.getCwd(), 'bin', 'benchkit-results']);
+		ensureDir(resultDir);
 
-		Sys.println('why-benchkit: running targets [${opts.targets.join(", ")}]');
-		if (jsonDirAbs != null)
-			Sys.println('why-benchkit: json-dir $jsonDirAbs');
+		Sys.println('why-benchkit: running targets [${targets.join(", ")}]');
 
-		final nameWidth = maxNameWidth(opts.targets);
-		for (target in opts.targets) {
-			final jsonPath:Null<String> = jsonDirAbs == null ? null : Path.join([jsonDirAbs, '$target.json']);
-			if (jsonPath != null)
-				Sys.putEnv(BenchkitEnv.JSON_PATH, jsonPath);
-			else
-				Sys.putEnv(BenchkitEnv.JSON_PATH, '');
+		for (target in targets) {
+			final resultPath = Path.join([resultDir, '$target.json']);
+			Sys.putEnv(BenchkitEnv.RESULT_PATH, resultPath);
+			// Clear standalone JSON env so suite stays in host handoff mode only.
+			Sys.putEnv(BenchkitEnv.JSON_PATH, '');
 
-			if (target == 'js') {
+			if (target == Js) {
 				// Replaces cwd `.travix` for this run (not a merge). See `.travix/README.md`.
 				Sys.putEnv('TRAVIX_CONFIG_DIR', travixConfigDir);
 			}
 
-			HostTargets.installAndRun(target, []);
-			printTargetLine(target, nameWidth, jsonPath);
+			Sys.println('why-benchkit: target $target');
+			target.installAndRun([]);
 
-			if (target == 'js')
+			final doc = readResult(resultPath);
+			for (r in reporters)
+				r.report(doc);
+
+			if (target == Js)
 				Sys.putEnv('TRAVIX_CONFIG_DIR', '');
 		}
 
+		Sys.putEnv(BenchkitEnv.RESULT_PATH, '');
 		Sys.exit(0);
 	}
 
-	static function printTargetLine(target:String, nameWidth:Int, jsonPath:Null<String>):Void {
-		final pad = StringTools.rpad(target, ' ', nameWidth);
-		if (jsonPath != null)
-			Sys.println('  $pad  ok  ($jsonPath)');
-		else
-			Sys.println('  $pad  ok');
+	/**
+		Point travix at `bench.hxml`. Must update both the env and `Travix.TESTS`
+		because the static may already have been initialized to `tests.hxml`.
+	**/
+	static function ensureBenchHxml():Void {
+		Sys.putEnv('TRAVIX_HXML', BENCH_HXML);
+		@:privateAccess Travix.TESTS = BENCH_HXML;
 	}
 
-	static function maxNameWidth(targets:Array<String>):Int {
-		var w = 0;
-		for (t in targets)
-			if (t.length > w)
-				w = t.length;
-		return w;
-	}
-
-	static function absolutePath(path:String):String {
-		if (Path.isAbsolute(path))
-			return Path.normalize(path);
-		return Path.normalize(Path.join([Sys.getCwd(), path]));
+	static function readResult(path:String):SuiteJsonDocument {
+		if (!FileSystem.exists(path))
+			throw 'why-benchkit: missing suite result handoff at $path';
+		final raw = File.getContent(path);
+		return (Json.parse(raw) : SuiteJsonDocument);
 	}
 
 	static function ensureDir(dir:String):Void {
 		final normalized = Path.normalize(dir);
 		if (FileSystem.exists(normalized)) {
 			if (!FileSystem.isDirectory(normalized))
-				throw 'why-benchkit: --json-dir is not a directory: $normalized';
+				throw 'why-benchkit: not a directory: $normalized';
 			return;
 		}
 		final parent = Path.directory(normalized);

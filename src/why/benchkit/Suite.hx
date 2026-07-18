@@ -1,6 +1,8 @@
 package why.benchkit;
 
 import travix.Logger;
+import why.benchkit.reporter.ConsoleReporter;
+import why.benchkit.reporter.JsonReporter;
 
 /**
 	Named micro-benchmark suite: register cases with `bench`, run with `run`.
@@ -38,9 +40,11 @@ class Suite {
 	}
 
 	/**
-		Measure each registered case, print a console summary via `travix.Logger`,
-		optionally write `--json <path>` from process args, then exit via `Logger.exit`
-		(unless `opts.exit` is `false`).
+		Measure each registered case, then either:
+		- host mode (`WHY_BENCHKIT_RESULT` set): hand off via `ResultBridge` and exit
+		- standalone: run local reporters (console + optional `--json`) and exit
+
+		Skips exit when `opts.exit` is `false` (tests / embedding).
 	**/
 	public function run(?opts:SuiteRunOptions):SuiteResult {
 		final results:Array<BenchCaseResult> = [];
@@ -62,13 +66,20 @@ class Suite {
 			name: name,
 			results: results,
 		};
-		ConsoleReporter.report(suiteResult);
+		final doc = SuiteJson.fromSuiteResult(suiteResult);
 
 		var exitCode = 0;
 		try {
-			final flags = ProcessFlags.parse(opts?.args ?? ProcessArgs.get());
-			if (flags.jsonPath != null)
-				JsonWriter.write(flags.jsonPath, SuiteJson.stringify(suiteResult));
+			if (ResultBridge.isHostMode()) {
+				ResultBridge.emit(doc);
+			} else {
+				final reporters:Array<Reporter> = [new ConsoleReporter()];
+				final flags = ProcessFlags.parse(opts?.args ?? ProcessArgs.get());
+				if (flags.jsonPath != null)
+					reporters.push(JsonReporter.toPath(flags.jsonPath));
+				for (r in reporters)
+					r.report(doc);
+			}
 		} catch (e:Dynamic) {
 			Logger.println('why.benchkit: error: ${Std.string(e)}');
 			exitCode = 1;

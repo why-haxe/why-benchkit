@@ -1,10 +1,11 @@
-package why.benchkit;
+package why.benchkit.reporter;
 
 /**
 	Write suite JSON to `path` on the current target.
 	- sys / `node`: filesystem (`sys.io.File`).
 	- browser `js`: `window.benchkitWriteFile(path, content)` from packaged
-	  `.travix/js/hooks.js` (host sets `TRAVIX_CONFIG_DIR` to that config root).
+	  `.travix/js/hooks.js` (for standalone `--json` only; host mode uses
+	  `benchkitComplete` via `ResultBridge`).
 **/
 class JsonWriter {
 	function new() {}

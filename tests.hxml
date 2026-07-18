@@ -1,7 +1,0 @@
-# Travix / why-benchkit host suite entrypoint (consumer convention).
-# `haxelib run why-benchkit run` and `travix` look for this file in the project cwd.
-# Must include `-main` for a class that builds a suite and calls `suite.run()`.
--cp src
--cp tests
--lib travix
--main BenchSuite

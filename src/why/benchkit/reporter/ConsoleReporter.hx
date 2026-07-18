@@ -1,19 +1,18 @@
-package why.benchkit;
+package why.benchkit.reporter;
 
 import travix.Logger;
+import why.benchkit.Reporter;
+import why.benchkit.SuiteJsonDocument;
 
 /**
 	Human-readable suite summary via `travix.Logger` (sys + browser JS).
 **/
-class ConsoleReporter {
-	function new() {}
+class ConsoleReporter implements Reporter {
+	public function new() {}
 
-	/**
-		Print a console summary for `result`.
-	**/
-	public static function report(result:SuiteResult):Void {
-		Logger.println('suite: ${result.name}');
-		for (r in result.results) {
+	public function report(doc:SuiteJsonDocument):Void {
+		Logger.println('suite: ${doc.suite}  (${doc.target})');
+		for (r in doc.results) {
 			Logger.println('  ${r.name}  ${formatOps(r.opsPerSec)} ops/sec  (${formatMs(r.totalMs)} ms, ${r.iterations} iter, ${r.warmup} warmup)');
 		}
 	}
@@ -21,7 +20,6 @@ class ConsoleReporter {
 	static function formatOps(opsPerSec:Float):String {
 		if (!Math.isFinite(opsPerSec))
 			return Std.string(opsPerSec);
-		// Keep summary readable without locale-specific formatting.
 		return Std.string(Math.round(opsPerSec * 100) / 100);
 	}
 

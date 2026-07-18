@@ -1,7 +1,7 @@
 import why.benchkit.Bench;
 
 /**
-	Default suite entry for travix / `why-benchkit run` (`tests.hxml`).
+	Default suite entry for travix / `why-benchkit run` (`bench.hxml`).
 	Keep iterations low so host multi-target smoke stays quick.
 **/
 class BenchSuite {

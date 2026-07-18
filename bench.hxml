@@ -1,0 +1,7 @@
+# why-benchkit host / travix suite entrypoint (consumer convention).
+# `haxelib run why-benchkit run` sets TRAVIX_HXML=bench.hxml.
+# Must include `-main` for a class that builds a suite and calls `suite.run()`.
+-cp src
+-cp tests
+-lib travix
+-main BenchSuite

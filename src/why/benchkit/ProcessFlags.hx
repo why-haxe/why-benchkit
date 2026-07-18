@@ -1,13 +1,13 @@
 package why.benchkit;
 
 /**
-	Process-level CLI flags for a compiled suite.
-	Always print a console summary; optional `--json <path>` writes machine-readable results.
-	Args come from `ProcessArgs` (`Sys.args()` on sys/node; `window.benchkitArgs` on browser `js`).
+	Process-level CLI flags for a standalone suite run.
+	Optional `--json <path>` selects a `JsonReporter` output path.
+	Args come from `ProcessArgs` (`Sys.args()` on sys/node; `window.benchkitArgs`
+	on browser `js` when set for standalone use).
 
-	When the host runs with `--json-dir`, it sets `WHY_BENCHKIT_JSON` because travix
-	`buildAndRun` does not forward runtime argv on most targets. Browser `js` gets
-	`--json` via `window.benchkitArgs` from packaged `.travix/js/hooks.js`.
+	Host-driven runs use `WHY_BENCHKIT_RESULT` + `ResultBridge` instead; they do
+	not consult these flags for reporting.
 **/
 class ProcessFlags {
 	/** Path for JSON output when `--json` / `WHY_BENCHKIT_JSON` was set; otherwise `null`. */
@@ -19,7 +19,7 @@ class ProcessFlags {
 
 	/**
 		Parse suite process args. Recognizes `--json <path>`, then falls back to
-		env `WHY_BENCHKIT_JSON` (set by the host multi-target runner).
+		env `WHY_BENCHKIT_JSON` (standalone / embedding).
 		Throws if `--json` is present without a following path.
 	**/
 	public static function parse(args:Array<String>):ProcessFlags {

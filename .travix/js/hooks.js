@@ -10,12 +10,14 @@
  * cwd `.travix` for the run (not a merge). Do not rely on writing into the
  * consumer's `.travix/`, and do not use deprecated bin/js/run.js overrides.
  *
- * Exposes window.benchkitWriteFile(path, content) so suite JSON can be written
- * from the page via host-side fs.writeFileSync.
+ * Host mode (WHY_BENCHKIT_RESULT set):
+ *   - Exposes window.benchkitComplete(result) — prefer a plain object
+ *     (Puppeteer JSON-clones it); string JSON is also accepted.
+ *   - Sets window.benchkitResultPath so the suite enters host handoff mode.
+ *   - Writes the result JSON to WHY_BENCHKIT_RESULT on the host filesystem.
  *
- * When WHY_BENCHKIT_JSON is set (host `--json-dir`), also sets
- * window.benchkitArgs to ["--json", path] before navigation so ProcessFlags
- * can resolve the output path in the browser.
+ * Standalone `--json` in the browser:
+ *   - Exposes window.benchkitWriteFile(path, content) for JsonWriter.
  */
 const fs = require("fs");
 
@@ -26,11 +28,16 @@ module.exports = {
 			fs.writeFileSync(filePath, content, "utf8");
 		});
 
-		const jsonPath = process.env.WHY_BENCHKIT_JSON;
-		if (jsonPath) {
+		const resultPath = process.env.WHY_BENCHKIT_RESULT;
+		if (resultPath) {
+			await page.exposeFunction("benchkitComplete", (result) => {
+				const content =
+					typeof result === "string" ? result : JSON.stringify(result);
+				fs.writeFileSync(resultPath, content, "utf8");
+			});
 			await page.evaluateOnNewDocument((path) => {
-				window.benchkitArgs = ["--json", path];
-			}, jsonPath);
+				window.benchkitResultPath = path;
+			}, resultPath);
 		}
 	},
 };

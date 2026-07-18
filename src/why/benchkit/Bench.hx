@@ -4,11 +4,6 @@ package why.benchkit;
 	Public entry for why-benchkit micro-benchmarks.
 **/
 class Bench {
-	public static inline final DEFAULT_ITERATIONS:Int = Measure.DEFAULT_ITERATIONS;
-	public static inline final DEFAULT_WARMUP:Int = Measure.DEFAULT_WARMUP;
-
-	function new() {}
-
 	/**
 		Create a named suite with optional default warmup / iterations.
 	**/

@@ -1,5 +1,9 @@
 package why.benchkit.host;
 
+import why.benchkit.Reporter;
+import why.benchkit.reporter.ConsoleReporter;
+import why.benchkit.reporter.JsonReporter;
+
 /**
 	`why-benchkit run` subcommand: run the consumer suite across targets via travix.
 **/
@@ -9,14 +13,14 @@ class HostRunCommand {
 	final libraryRoot:String;
 
 	/**
-		Comma-separated targets (default: interp,neko,python,node,js,lua,cpp,jvm)
+		Comma-separated targets (required). Known: interp,neko,python,node,js,lua,cpp,jvm
 	**/
 	@:alias(false)
 	@:optional
 	public var targets:Targets;
 
 	/**
-		Write `<dir>/<target>.json` per target (sets WHY_BENCHKIT_JSON)
+		Write `<dir>/<target>.json` per target after host receives suite handoff
 	**/
 	@:flag('json-dir')
 	@:alias(false)
@@ -28,13 +32,27 @@ class HostRunCommand {
 	}
 
 	/**
-		Run the consumer suite (tests.hxml) across one or more Haxe targets via travix.
+		Run the consumer suite (`bench.hxml`) across one or more Haxe targets via travix.
 		Install project dependencies yourself before invoking this command.
 	**/
 	@:defaultCommand
 	public function run():Void {
 		try {
-			HostRun.run(new HostOptions(targets, emptyToNull(jsonDir)), libraryRoot);
+			if (targets == null || targets.length == 0) {
+				Sys.println('why-benchkit: --targets is required');
+				Sys.println('Known targets: ${Targets.ALL.join(",")}');
+				Sys.exit(1);
+				return;
+			}
+			final reporters:Array<Reporter> = [new ConsoleReporter()];
+			switch jsonDir {
+				case null | '':
+				case dir:
+					final trimmed = StringTools.trim(dir);
+					if (trimmed.length > 0)
+						reporters.push(JsonReporter.toDir(haxe.io.Path.normalize(absolutePath(trimmed))));
+			}
+			HostRun.run(targets, reporters, libraryRoot);
 		} catch (e:Dynamic) {
 			Sys.println(Std.string(e));
 			Sys.exit(1);
@@ -50,40 +68,9 @@ class HostRunCommand {
 		Sys.println(tink.Cli.getDoc(this, new tink.cli.doc.DefaultFormatter('why-benchkit run')));
 	}
 
-	static function emptyToNull(s:String):Null<String> {
-		return s == null || s.length == 0 ? null : s;
-	}
-}
-
-enum abstract Target(String) to String {
-	final Interp = "interp";
-	final Neko = "neko";
-	final Python = "python";
-	final Node = "node";
-	final Js = "js";
-	final Lua = "lua";
-	final Cpp = "cpp";
-	final Jvm = "jvm";
-
-	@:from
-	static function fromString(s:String):Target {
-		return switch (s) {
-			case Interp: Interp;
-			case Neko: Neko;
-			case Python: Python;
-			case Node: Node;
-			case Js: Js;
-			case Lua: Lua;
-			case Cpp: Cpp;
-			case Jvm: Jvm;
-			case _: throw 'unknown target "$s"';
-		}
-	}
-}
-
-abstract Targets(Array<Target>) from Array<Target> to Array<Target> to Array<String> {
-	@:from
-	static function fromString(s:String):Targets {
-		return s.split(',').map(s -> (s : Target));
+	static function absolutePath(path:String):String {
+		if (haxe.io.Path.isAbsolute(path))
+			return path;
+		return haxe.io.Path.join([Sys.getCwd(), path]);
 	}
 }

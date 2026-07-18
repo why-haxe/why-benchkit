@@ -32,10 +32,10 @@ Requires Haxe 4.3+ (see `.haxerc`). Declares `travix`, `tink_cli`, and `hx3compa
 In the consumer project:
 
 1. Depend on `why-benchkit` and install your project dependencies yourself.
-2. Add a travix-style `tests.hxml` with `-lib why-benchkit` and a `-main` that calls `suite.run()`:
+2. Add a `bench.hxml` with `-lib why-benchkit` and a `-main` that calls `suite.run()`:
 
 ```hxml
-# tests.hxml
+# bench.hxml
 -cp tests
 -lib why-benchkit
 -main BenchSuite
@@ -61,7 +61,7 @@ class BenchSuite {
       warmup: 100,
     });
 
-    suite.run(); // always prints a summary; honors --json / host JSON env
+    suite.run(); // standalone: console + optional --json; under host: hand off results
   }
 }
 ```
@@ -83,7 +83,7 @@ haxelib run why-benchkit run --targets interp,neko,python,node,js,lua,cpp,jvm [-
 lix run why-benchkit run --targets interp,node --json-dir out/
 ```
 
-Defaults when `--targets` is omitted: `interp,neko,python,node,js,lua,cpp,jvm`.
+`--targets` is required. Known targets: `interp,neko,python,node,js,lua,cpp,jvm`.
 
 Single-target:
 
@@ -91,15 +91,14 @@ Single-target:
 haxelib run why-benchkit run --targets interp --json-dir out/
 ```
 
-Per target, the host runs travix `install()` (toolchain) + `buildAndRun()` against `tests.hxml`. Install haxelib/lix project deps before invoking the host.
+Per target, the host runs travix `install()` + `buildAndRun()` against `bench.hxml` (`TRAVIX_HXML`). The suite hands back a result document; the host runs reporters (console always; JSON files when `--json-dir` is set). Install haxelib/lix project deps before invoking the host.
 
 ## JSON output
 
-**Suite process** (one compiled target) — always prints a console summary; optional file on sys / `node`:
+**Suite process** (standalone, one compiled target) — console summary; optional file on sys / `node` / browser:
 
 ```bash
 # filesystem write (exact invocation depends on how you compile/run the suite)
-# e.g. after building for node/neko/cpp/…:
 ./suite --json out/node.json
 ```
 
@@ -110,9 +109,7 @@ haxelib run why-benchkit run --targets node,js --json-dir out/
 # → out/node.json, out/js.json
 ```
 
-(The host sets `WHY_BENCHKIT_JSON` because travix does not forward runtime argv on most targets.)
-
-For browser `js`, prefer the host + `--json-dir` (see below); a bare suite `--json` path alone is not enough without the packaged hooks.
+The host sets `WHY_BENCHKIT_RESULT` so the suite emits a handoff file (browser: `window.benchkitComplete(object)` via packaged hooks). Reporters run in the host process.
 
 Suggested shape:
 
@@ -136,11 +133,11 @@ Suggested shape:
 
 ## Browser JS (`TRAVIX_CONFIG_DIR`)
 
-For target `js`, travix runs the suite in a browser (puppeteer). JSON write uses a host bridge:
+For target `js`, travix runs the suite in a browser (puppeteer). Result handoff uses a host bridge:
 
 1. This package ships hooks at `.travix/js/hooks.js`.
 2. Before `JsCommand.buildAndRun`, the host sets `TRAVIX_CONFIG_DIR` to the **absolute** path of that packaged `.travix/` directory.
-3. `beforeGoto` exposes `window.benchkitWriteFile(path, content)` via `page.exposeFunction` (host `fs.writeFileSync`).
+3. When `WHY_BENCHKIT_RESULT` is set, hooks expose `window.benchkitComplete(result)` (prefer a plain object) and set `window.benchkitResultPath`.
 
 `TRAVIX_CONFIG_DIR` **replaces** the consumer’s cwd `.travix` for that run (not a merge). You do not need to write into the consumer’s `.travix/`, and you should not use deprecated `bin/js/run.js` / `run.html` overrides.
 

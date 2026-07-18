@@ -2,13 +2,8 @@ package why.benchkit;
 
 /**
 	One named case from `Suite.run`.
-	Fields align with the suite JSON `results[]` entry shape.
+	Fields align with the suite JSON `results[]` entry shape (plus `totalSeconds`).
 **/
-typedef BenchCaseResult = {
+typedef BenchCaseResult = MeasureResult & {
 	final name:String;
-	final iterations:Int;
-	final warmup:Int;
-	final totalSeconds:Float;
-	final totalMs:Float;
-	final opsPerSec:Float;
-}
+};
