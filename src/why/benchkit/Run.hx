@@ -1,3 +1,5 @@
+package why.benchkit;
+
 /**
 	Haxelib / lix run entry (`"main": "Run"` in haxelib.json).
 

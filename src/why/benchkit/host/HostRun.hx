@@ -97,7 +97,7 @@ class HostRun {
 			Sys.println('why-benchkit: json-dir $jsonDirAbs');
 
 		// Shared haxelib/lix deps from haxelib.json + tests.hxml (travix InstallCommand).
-		new InstallCommand().dependencies();
+		// new InstallCommand().dependencies();
 
 		final nameWidth = maxNameWidth(opts.targets);
 		for (target in opts.targets) {

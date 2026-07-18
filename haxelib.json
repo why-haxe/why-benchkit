@@ -5,7 +5,7 @@
 	"license": "MIT",
 	"url": "https://github.com/kevinresol/why-benchkit",
 	"classPath": "src",
-	"main": "Run",
+	"main": "why.benchkit.Run",
 	"tags": ["benchmark", "performance", "cross", "travix"],
 	"contributors": ["kevinresol"],
 	"releasenote": "Initial release: Bench.suite / measure, JSON output, and multi-target host run via travix (including browser js hooks).",
@@ -15,13 +15,7 @@
 	},
 	"travix": {
 		"release": {
-			"files": [
-				"haxelib.json",
-				"README.md",
-				"Run.hx",
-				"src",
-				".travix"
-			]
+			"files": ["haxelib.json", "README.md", "Run.hx", "src", ".travix"]
 		}
 	}
 }

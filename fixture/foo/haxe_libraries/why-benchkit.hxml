@@ -1,0 +1,6 @@
+# @run: haxelib run-dir why-benchkit  ${SCOPE_DIR}/../..
+-lib travix
+-lib hx3compat
+-cp ${SCOPE_DIR}/../../src
+-D why-benchkit=0.0.1
+--macro Sys.println("haxe_libraries/why-benchkit.hxml:4: [Warning] Using dev version of library why-benchkit")
