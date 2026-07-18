@@ -6,3 +6,4 @@
 -js dump/check-js.js
 --no-output
 why.benchkit.Bench
+why.benchkit.Runner

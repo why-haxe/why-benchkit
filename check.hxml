@@ -5,3 +5,4 @@
 -lib why-unit
 --no-output
 why.benchkit.Bench
+why.benchkit.Runner
