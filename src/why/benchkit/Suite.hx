@@ -1,8 +1,6 @@
 package why.benchkit;
 
 import travix.Logger;
-import why.benchkit.reporter.ConsoleReporter;
-import why.benchkit.reporter.JsonReporter;
 
 /**
 	Named micro-benchmark suite: register cases with `bench`, run with `run`.
@@ -42,7 +40,8 @@ class Suite {
 	/**
 		Measure each registered case, then either:
 		- host mode (`WHY_BENCHKIT_RESULT` set): hand off via `ResultBridge` and exit
-		- standalone: run local reporters (console + optional `--json`) and exit
+		- standalone: report via `Config.createReporters()` (`WHY_BENCHKIT_CONFIG` /
+		  `window.why.benchkit`; default console) and exit
 
 		Skips exit when `opts.exit` is `false` (tests / embedding).
 	**/
@@ -71,11 +70,7 @@ class Suite {
 			if (ResultBridge.isHostMode()) {
 				ResultBridge.emit(doc);
 			} else {
-				final reporters:Array<Reporter> = [new ConsoleReporter()];
-				final flags = ProcessFlags.parse(opts?.args ?? ProcessArgs.get());
-				if (flags.jsonPath != null)
-					reporters.push(new JsonReporter(flags.jsonPath));
-				for (r in reporters)
+				for (r in Config.createReporters())
 					r.report(doc);
 			}
 		} catch (e:Dynamic) {

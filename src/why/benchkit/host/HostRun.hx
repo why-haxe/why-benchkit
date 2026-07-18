@@ -25,7 +25,8 @@ import why.benchkit.reporter.JsonReporter;
 	invoking the host.
 
 	`--targets` is required (e.g. `--targets interp` or `--targets node,js`).
-	Standalone suite runs still honor `--json` / `WHY_BENCHKIT_JSON`.
+	Standalone suite reporting uses `Config` / `WHY_BENCHKIT_CONFIG` (Chunk 03);
+	host still injects `WHY_BENCHKIT_RESULT` until Chunks 06/07.
 
 	Uses travix's Haxe API directly (no `haxelib run travix` fallback).
 **/
