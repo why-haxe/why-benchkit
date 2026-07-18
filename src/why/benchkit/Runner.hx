@@ -45,7 +45,7 @@ class Runner {
 		final doc:BenchmarkResult = {
 			haxeVersion: BenchmarkMeta.haxeVersion(),
 			target: BenchmarkMeta.target(),
-			timestamp: BenchmarkMeta.timestampNow(),
+			timestamp: Date.now().getTime(),
 			results: suiteResults,
 		};
 

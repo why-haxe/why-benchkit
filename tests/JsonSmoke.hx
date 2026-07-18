@@ -35,10 +35,7 @@ class JsonSmoke {
 			FileSystem.deleteFile(outPath);
 
 		Sys.putEnv(BenchkitEnv.CONFIG, Json.stringify({
-			reporters: [
-				{name: "console"},
-				{name: "json", outputPath: outPath},
-			],
+			reporters: [{name: "console"}, {name: "json", outputPath: outPath},],
 		}));
 		final fromEnv = Config.createReporters();
 		if (fromEnv.length != 2)
@@ -95,7 +92,7 @@ class JsonSmoke {
 		final doc:BenchmarkResult = {
 			haxeVersion: BenchmarkMeta.haxeVersion(),
 			target: BenchmarkMeta.target(),
-			timestamp: BenchmarkMeta.formatTimestamp(Date.fromTime(0)),
+			timestamp: Date.fromTime(0),
 			results: [
 				{
 					name: "json_smoke",

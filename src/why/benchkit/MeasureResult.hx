@@ -8,4 +8,6 @@ import why.unit.time.Millisecond;
 typedef MeasureResult = {
 	final name:String;
 	final duration:Millisecond;
+	final iterations:Int;
+	final warmup:Int;
 }

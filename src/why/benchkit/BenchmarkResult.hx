@@ -6,6 +6,6 @@ package why.benchkit;
 typedef BenchmarkResult = {
 	final haxeVersion:String;
 	final target:String;
-	final timestamp:String;
+	final timestamp:Float;
 	final results:Array<SuiteResult>;
 }

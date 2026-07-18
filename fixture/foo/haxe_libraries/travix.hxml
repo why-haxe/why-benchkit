@@ -1,7 +1,6 @@
-# @install: lix --silent download "gh://github.com/back2dos/travix#3bd4b1a27dd7b2802825571c9d85e2e065bb12fd" into travix/0.16.0/github/3bd4b1a27dd7b2802825571c9d85e2e065bb12fd
-# @post-install: cd ${HAXE_LIBCACHE}/travix/0.16.0/github/3bd4b1a27dd7b2802825571c9d85e2e065bb12fd && haxe -cp src --run travix.PostDownload
-# @run: haxelib run-dir travix "${HAXE_LIBCACHE}/travix/0.16.0/github/3bd4b1a27dd7b2802825571c9d85e2e065bb12fd"
+# @run: haxelib run-dir travix "/Users/kevin/Codes/travix"
 -lib tink_cli
--cp ${HAXE_LIBCACHE}/travix/0.16.0/github/3bd4b1a27dd7b2802825571c9d85e2e065bb12fd/src
+-cp /Users/kevin/Codes/travix/src
 -D travix=0.16.0
---macro travix.Macro.setup()
+/Users/kevin/Codes/travix/extraParams.hxml
+--macro Sys.println("haxe_libraries/travix.hxml:4: [Warning] Using dev version of library travix")

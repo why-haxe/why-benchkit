@@ -17,7 +17,7 @@ class JsonReporter implements Reporter {
 
 	public function report(result:BenchmarkResult):Void {
 		ensureParentDir(outputPath);
-		write(outputPath, Json.stringify(result));
+		write(outputPath, Json.stringify(result, '  '));
 	}
 
 	static function ensureParentDir(filePath:String):Void {

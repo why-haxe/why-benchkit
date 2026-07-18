@@ -33,6 +33,8 @@ class Measure {
 		return {
 			name: name,
 			duration: new Millisecond(totalMs),
+			iterations: iterations,
+			warmup: warmup,
 		};
 	}
 }
