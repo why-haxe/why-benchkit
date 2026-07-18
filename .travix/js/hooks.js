@@ -27,22 +27,20 @@ module.exports = {
 			fs.writeFileSync(filePath, content, "utf8");
 		});
 
-		const configRaw = process.env.WHY_BENCHKIT_CONFIG;
-		let config = null;
-		if (configRaw != null && configRaw.length > 0) {
-			try {
-				config = JSON.parse(configRaw);
-			} catch (e) {
-				throw new Error(
-					"why-benchkit: invalid WHY_BENCHKIT_CONFIG JSON for browser inject: " +
-						String(e)
-				);
-			}
-		}
-
-		await page.evaluateOnNewDocument((cfg) => {
+		await page.evaluateOnNewDocument((config) => {
 			window.why = window.why || {};
-			window.why.benchkit = cfg;
-		}, config);
+			window.why.benchkit = config;
+		}, getConfig());
 	},
 };
+
+function getConfig() {
+	try {
+		return JSON.parse(process.env.WHY_BENCHKIT_CONFIG);
+	} catch (e) {
+		throw new Error(
+			"why-benchkit: invalid WHY_BENCHKIT_CONFIG JSON for browser inject: " +
+				String(e)
+		);
+	}
+}

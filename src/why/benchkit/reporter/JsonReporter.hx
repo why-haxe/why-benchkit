@@ -35,7 +35,6 @@ class JsonReporter implements Reporter {
 
 	static function write(path:String, content:String):Void {
 		#if (js && !nodejs)
-		travix.Logger.println('js write');
 		switch untyped js.Browser.window.benchkitWriteFile {
 			case null:
 				throw "why.benchkit: window.benchkitWriteFile is not available "
