@@ -1,4 +1,5 @@
 # @run: haxelib run-dir why-benchkit .
 -cp src
 -lib travix
+-lib why-unit
 -D why-benchkit=0.0.1

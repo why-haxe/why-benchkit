@@ -10,6 +10,7 @@
 	"contributors": ["kevinresol"],
 	"releasenote": "Initial release: Bench.suite / measure, JSON output, and multi-target host run via travix (including browser js hooks).",
 	"dependencies": {
+		"why-unit": "",
 		"travix": "",
 		"tink_cli": "",
 		"hx3compat": ""

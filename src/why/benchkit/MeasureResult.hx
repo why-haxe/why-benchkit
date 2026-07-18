@@ -1,5 +1,7 @@
 package why.benchkit;
 
+import why.unit.time.*;
+
 /**
 	Timing result from `Bench.measure`.
 	Fields align with the suite JSON shape (`totalMs`, `opsPerSec`, `iterations`, `warmup`).
@@ -7,7 +9,6 @@ package why.benchkit;
 typedef MeasureResult = {
 	final iterations:Int;
 	final warmup:Int;
-	final totalSeconds:Float;
-	final totalMs:Float;
+	final duration:Millisecond;
 	final opsPerSec:Float;
 }
