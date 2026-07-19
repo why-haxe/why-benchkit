@@ -120,17 +120,41 @@ haxelib run why-benchkit run --targets interp --json-dir out/
 
 Per target, the host runs travix `install()` + `buildAndRun()` against `bench.hxml` (`TRAVIX_HXML`), and sets `WHY_BENCHKIT_CONFIG` so the suite reports itself (console always; plus a JSON file under `--json-dir` when requested). Install haxelib/lix project deps before invoking the host.
 
+With `--json-dir`, results land under `<json-dir>/<full-sha>/` when the git working tree is clean, or `<json-dir>/_dirty/` when dirty / git is unavailable. After the run, the host writes that folder’s `manifest.json` and rebuilds the root clean-commit catalog.
+
+Rebuild the root catalog alone (idempotent scan of commit folders):
+
+```bash
+haxelib run why-benchkit manifest --json-dir out/
+# or
+lix run why-benchkit manifest --json-dir out/
+```
+
 ## JSON output
 
-**Host** — one nested JSON file per target (recommended; works for browser `js` too):
+**Host** — nested JSON under a commit or `_dirty` folder (recommended; works for browser `js` too):
 
 ```bash
 haxelib run why-benchkit run --targets node,js --json-dir out/
-# → out/<haxeVersion>/node.json, out/<haxeVersion>/js.json
-# (CLI target id in the filename; e.g. --targets interp → out/<haxeVersion>/interp.json)
+# clean tree → out/<full-sha>/<haxeVersion>/node.json, …/js.json
+# dirty tree → out/_dirty/<haxeVersion>/node.json, …/js.json
+# plus out/<sha|_dirty>/manifest.json and out/manifest.json (clean SHAs only)
 ```
 
-**Standalone** — set `WHY_BENCHKIT_CONFIG` yourself before running the compiled suite (browser: inject `window.why.benchkit`). Use root `target` plus json `outputDir` as in [Reporter config](#reporter-config).
+Layout:
+
+```text
+out/
+  manifest.json              # { "commits": ["<sha>", ...] } oldest → newest
+  <full-sha>/
+    manifest.json            # { "timestamp": <git commit ms>, "files": ["4.3.7/node.json", ...] }
+    <haxeVersion>/<target>.json
+  _dirty/                    # local only; never listed in root manifest.json
+    manifest.json            # { "timestamp": <last run ms>, "files": [...] }
+    <haxeVersion>/<target>.json
+```
+
+**Standalone** — set `WHY_BENCHKIT_CONFIG` yourself before running the compiled suite (browser: inject `window.why.benchkit`). Use root `target` plus json `outputDir` pointing at the commit or `_dirty` folder as in [Reporter config](#reporter-config).
 
 Document shape:
 

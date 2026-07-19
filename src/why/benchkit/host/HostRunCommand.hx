@@ -16,7 +16,7 @@ class HostRunCommand {
 	public var targets:Targets;
 
 	/**
-		Directory for per-target JSON output (`<dir>/<target>.json` via suite config inject)
+		Directory for nested JSON output (`<dir>/<sha|_dirty>/<haxeVer>/<target>.json`)
 	**/
 	@:flag('json-dir')
 	@:alias(false)

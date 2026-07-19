@@ -1,5 +1,6 @@
 package why.benchkit;
 
+import why.benchkit.host.HostManifestCommand;
 import why.benchkit.host.HostRunCommand;
 
 /**
@@ -16,9 +17,16 @@ class Run {
 	@:command
 	public final run:HostRunCommand;
 
+	/**
+		Rebuild the root clean-commit JSON catalog under `--json-dir`
+	**/
+	@:command
+	public final manifest:HostManifestCommand;
+
 	public function new(libraryRoot:String) {
 		this.libraryRoot = libraryRoot;
 		this.run = new HostRunCommand(libraryRoot);
+		this.manifest = new HostManifestCommand();
 	}
 
 	static function main():Void {

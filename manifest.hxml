@@ -1,0 +1,8 @@
+# JsonManifest smoke (interp).
+# Usage: haxe manifest.hxml
+-cp src
+-cp tests
+-lib travix
+-lib why-unit
+-main ManifestSmoke
+--interp

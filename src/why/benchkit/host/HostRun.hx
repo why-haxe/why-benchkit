@@ -23,8 +23,9 @@ import why.benchkit.host.Targets;
 	invoking the host.
 
 	`--targets` is required (e.g. `--targets interp` or `--targets node,js`).
-	Optional `--json-dir` adds a per-target JSON reporter
-	(`<dir>/<haxeVersion>/<target>.json`) to the injected config alongside console.
+	Optional `--json-dir` writes nested JSON under `<json-dir>/<sha>/` or
+	`<json-dir>/_dirty/`, updates that folder's `manifest.json`, and rebuilds
+	the root clean-commit catalog.
 
 	Uses travix's Haxe API directly (no `haxelib run travix` fallback).
 **/
@@ -77,12 +78,23 @@ class HostRun {
 				dir;
 		};
 
+		final jsonOutput = switch jsonDirAbs {
+			case null:
+				null;
+			case dir:
+				final resolved = HostGit.resolveOutput(dir);
+				ensureDir(resolved.path);
+				resolved;
+		};
+
 		Sys.println('why-benchkit: running targets [${targets.join(", ")}]');
-		if (jsonDirAbs != null)
+		if (jsonDirAbs != null && jsonOutput != null) {
 			Sys.println('why-benchkit: json-dir $jsonDirAbs');
+			Sys.println('why-benchkit: json output ${jsonOutput.path}' + (jsonOutput.dirty ? ' (dirty)' : ''));
+		}
 
 		for (target in targets) {
-			Sys.putEnv(BenchkitEnv.CONFIG, configJson(target, jsonDirAbs));
+			Sys.putEnv(BenchkitEnv.CONFIG, configJson(target, jsonOutput != null ? jsonOutput.path : null));
 
 			if (target == Js) {
 				// Replaces cwd `.travix` for this run (not a merge). See `.travix/README.md`.
@@ -98,20 +110,28 @@ class HostRun {
 		}
 
 		Sys.putEnv(BenchkitEnv.CONFIG, '');
+
+		if (jsonDirAbs != null && jsonOutput != null) {
+			final timestamp = jsonOutput.dirty ? Date.now().getTime() : jsonOutput.timestamp;
+			JsonManifest.writeFolderManifest(jsonOutput.path, timestamp);
+			JsonManifest.rebuild(jsonDirAbs);
+		}
+
 		Sys.exit(0);
 	}
 
 	/**
 		Build the suite-process config JSON for one target.
-		Always includes console; adds json under `jsonDir/<haxeVersion>/<target>.json`
-		when set (root `target` + reporter `outputDir`).
+		Always includes console; adds json under
+		`<outputDir>/<haxeVersion>/<target>.json` when `outputDir` is set
+		(root `target` + reporter `outputDir`).
 	**/
-	static function configJson(target:Target, ?jsonDir:String):String {
+	static function configJson(target:Target, ?outputDir:String):String {
 		final reporters:Array<ReporterSpec> = [{name: 'console'}];
-		if (jsonDir != null && jsonDir != '') {
+		if (outputDir != null && outputDir != '') {
 			reporters.push({
 				name: 'json',
-				outputDir: jsonDir,
+				outputDir: outputDir,
 			});
 		}
 		final config:BenchkitConfig = {
