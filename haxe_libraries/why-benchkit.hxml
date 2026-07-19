@@ -2,4 +2,7 @@
 -cp src
 -lib travix
 -lib why-unit
+-lib tink_cli
+-lib hx3compat
 -D why-benchkit=0.0.1
+-D no-deprecation-warnings

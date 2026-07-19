@@ -1,5 +1,6 @@
 package why.benchkit;
 
+import why.benchkit.host.HostHtmlCommand;
 import why.benchkit.host.HostManifestCommand;
 import why.benchkit.host.HostRunCommand;
 
@@ -23,10 +24,17 @@ class Run {
 	@:command
 	public final manifest:HostManifestCommand;
 
+	/**
+		Generate a static HTML viewer that fetches manifests / JSON at runtime
+	**/
+	@:command
+	public final html:HostHtmlCommand;
+
 	public function new(libraryRoot:String) {
 		this.libraryRoot = libraryRoot;
 		this.run = new HostRunCommand(libraryRoot);
 		this.manifest = new HostManifestCommand();
+		this.html = new HostHtmlCommand();
 	}
 
 	static function main():Void {

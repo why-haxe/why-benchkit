@@ -130,6 +130,16 @@ haxelib run why-benchkit manifest --json-dir out/
 lix run why-benchkit manifest --json-dir out/
 ```
 
+Generate a static viewer shell (fetches manifests / JSON at runtime; no charts yet):
+
+```bash
+haxelib run why-benchkit html --out=bin/out.html --json-dir=out/
+# or
+lix run why-benchkit html --out=bin/out.html --json-dir=out/
+```
+
+Preview over HTTP (`file://` fetch will fail), e.g. `npx serve` or `python -m http.server`. The HTML uses a relative URL to `--json-dir` (override with `--json-base` if deploy layout differs). Deploy HTML and the JSON tree under the same origin.
+
 ## JSON output
 
 **Host** — nested JSON under a commit or `_dirty` folder (recommended; works for browser `js` too):
