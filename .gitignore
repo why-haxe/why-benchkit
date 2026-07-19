@@ -5,3 +5,4 @@ haxe_libraries/travix.hxml
 dump/
 # Release zip from scripts/pack.sh
 why-benchkit.zip
+bin/
