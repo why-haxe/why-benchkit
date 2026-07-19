@@ -1,4 +1,5 @@
 import haxe.Json;
+import haxe.io.Path;
 import sys.FileSystem;
 import sys.io.File;
 import why.benchkit.BenchkitEnv;
@@ -11,7 +12,7 @@ import why.benchkit.reporter.JsonReporter;
 import why.unit.time.Millisecond;
 
 /**
-	Config + JsonReporter smoke on interp (new `BenchmarkResult` shape).
+	Config + JsonReporter smoke on interp (nested `outputDir` / root `target`).
 	Usage: haxe json.hxml
 **/
 class JsonSmoke {
@@ -30,12 +31,15 @@ class JsonSmoke {
 
 		if (!FileSystem.exists("dump"))
 			FileSystem.createDirectory("dump");
-		final outPath = "dump/json_smoke_config.json";
-		if (FileSystem.exists(outPath))
-			FileSystem.deleteFile(outPath);
+		final outputDir = "dump/json_smoke_config";
+		final cliTarget = "interp";
+		final haxeVer = "test";
+		final outPath = Path.join([outputDir, haxeVer, cliTarget + ".json"]);
+		deleteIfExists(outPath);
 
 		Sys.putEnv(BenchkitEnv.CONFIG, Json.stringify({
-			reporters: [{name: "console"}, {name: "json", outputPath: outPath},],
+			target: cliTarget,
+			reporters: [{name: "console"}, {name: "json", outputDir: outputDir},],
 		}));
 		final fromEnv = Config.createReporters();
 		if (fromEnv.length != 2)
@@ -46,7 +50,7 @@ class JsonSmoke {
 			throw "JsonSmoke: expected second env reporter to be JsonReporter";
 
 		final envDoc:BenchmarkResult = {
-			haxeVersion: "test",
+			haxeVersion: haxeVer,
 			target: "eval",
 			timestamp: 0,
 			results: [],
@@ -60,13 +64,47 @@ class JsonSmoke {
 		var threw = false;
 		try {
 			Config.reportersFrom({
+				reporters: [{name: "json", outputDir: outputDir}],
+			});
+		} catch (e:Dynamic) {
+			threw = true;
+			final msg = Std.string(e);
+			if (msg.indexOf("config.target") < 0)
+				throw 'JsonSmoke: missing root target error should mention config.target, got $msg';
+		}
+		if (!threw)
+			throw "JsonSmoke: expected json reporter without root target to throw";
+
+		threw = false;
+		try {
+			Config.reportersFrom({
+				target: cliTarget,
 				reporters: [{name: "json"}],
 			});
 		} catch (e:Dynamic) {
 			threw = true;
+			final msg = Std.string(e);
+			if (msg.indexOf("outputDir") < 0)
+				throw 'JsonSmoke: missing outputDir error should mention outputDir, got $msg';
 		}
 		if (!threw)
-			throw "JsonSmoke: expected json reporter without outputPath to throw";
+			throw "JsonSmoke: expected json reporter without outputDir to throw";
+
+		threw = false;
+		try {
+			Sys.putEnv(BenchkitEnv.CONFIG, Json.stringify({
+				target: cliTarget,
+				reporters: [{name: "json", outputPath: "legacy.json"}],
+			}));
+			Config.createReporters();
+		} catch (e:Dynamic) {
+			threw = true;
+			final msg = Std.string(e);
+			if (msg.indexOf("outputPath") < 0 || msg.indexOf("outputDir") < 0)
+				throw 'JsonSmoke: legacy outputPath error should mention outputPath and outputDir, got $msg';
+		}
+		if (!threw)
+			throw "JsonSmoke: expected json reporter with legacy outputPath to throw";
 
 		threw = false;
 		try {
@@ -86,12 +124,14 @@ class JsonSmoke {
 	static function assertJsonReporterWrite():Void {
 		if (!FileSystem.exists("dump"))
 			FileSystem.createDirectory("dump");
-		final outPath = "dump/json_smoke.json";
-		if (FileSystem.exists(outPath))
-			FileSystem.deleteFile(outPath);
+		final outputDir = "dump/json_smoke";
+		final cliTarget = "interp";
+		final haxeVer = BenchmarkMeta.haxeVersion();
+		final outPath = Path.join([outputDir, haxeVer, cliTarget + ".json"]);
+		deleteIfExists(outPath);
 
 		final doc:BenchmarkResult = {
-			haxeVersion: BenchmarkMeta.haxeVersion(),
+			haxeVersion: haxeVer,
 			target: BenchmarkMeta.target(),
 			timestamp: 0,
 			results: [
@@ -110,7 +150,7 @@ class JsonSmoke {
 			commitHash: BenchmarkMeta.gitHash(),
 		};
 
-		final reporter:Reporter = new JsonReporter(outPath);
+		final reporter:Reporter = new JsonReporter(outputDir, cliTarget);
 		reporter.report(doc);
 
 		if (!FileSystem.exists(outPath))
@@ -147,5 +187,10 @@ class JsonSmoke {
 			throw "JsonSmoke: measure should omit totalMs / opsPerSec";
 
 		Sys.println('JsonSmoke wrote $outPath (haxe ${roundtrip.haxeVersion}, target ${roundtrip.target})');
+	}
+
+	static function deleteIfExists(path:String):Void {
+		if (FileSystem.exists(path))
+			FileSystem.deleteFile(path);
 	}
 }

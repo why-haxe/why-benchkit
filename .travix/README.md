@@ -35,7 +35,7 @@ the suite defaults to the console reporter.
 ### JsonReporter file writes
 
 `window.benchkitWriteFile(path, content)` is always exposed so browser
-`JsonWriter` / `JsonReporter` can persist `outputPath` to the host filesystem.
+`JsonWriter` / `JsonReporter` can persist the full nested file path to the host filesystem.
 
 `benchkitWriteFile` paths are resolved on the **host** (Node) relative to process cwd — after `Run` switches cwd, that is the consumer project.
 

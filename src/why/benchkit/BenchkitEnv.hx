@@ -8,7 +8,8 @@ class BenchkitEnv {
 
 	/**
 		JSON reporter config for the suite process (`Config.load`).
-		Shape: `{ "reporters": [{ "name": "console" }, { "name": "json", "outputPath": "..." }] }`.
+		Shape: `{ "target": "node", "reporters": [{ "name": "console" }, { "name": "json", "outputDir": "..." }] }`.
+		Root `target` is required when a json reporter is present.
 		Browser runs use `window.why.benchkit` instead (same shape).
 	**/
 	public static final CONFIG:String = 'WHY_BENCHKIT_CONFIG';

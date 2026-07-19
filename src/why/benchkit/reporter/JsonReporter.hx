@@ -7,17 +7,23 @@ import why.benchkit.Reporter;
 
 /**
 	Write benchmark JSON via `JsonWriter` (sys / node filesystem, or browser bridge).
+
+	Path: `<outputDir>/<haxeVersion>/<target>.json` where `target` is the root
+	config / CLI target (not `BenchmarkResult.target`).
 **/
 class JsonReporter implements Reporter {
-	final outputPath:String;
+	final outputDir:String;
+	final target:String;
 
-	public function new(outputPath:String) {
-		this.outputPath = outputPath;
+	public function new(outputDir:String, target:String) {
+		this.outputDir = outputDir;
+		this.target = target;
 	}
 
 	public function report(result:BenchmarkResult):Void {
-		ensureParentDir(outputPath);
-		write(outputPath, Json.stringify(result, '  '));
+		final filePath = Path.join([outputDir, result.haxeVersion, target + '.json']);
+		ensureParentDir(filePath);
+		write(filePath, Json.stringify(result, '  '));
 	}
 
 	static function ensureParentDir(filePath:String):Void {

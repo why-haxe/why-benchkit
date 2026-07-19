@@ -9,24 +9,30 @@ import why.benchkit.reporter.JsonReporter;
 
 	```json
 	{
+	  "target": "node",
 	  "reporters": [
 		{ "name": "console" },
-		{ "name": "json", "outputPath": "out/js.json" }
+		{ "name": "json", "outputDir": "out/<commit-hash-or-_dirty>" }
 	  ]
 	}
 	```
+
+	Root `target` is the CLI/host target string used in the JSON filename
+	(required when a `json` reporter is present).
 **/
 typedef BenchkitConfig = {
+	final ?target:String;
 	final reporters:Array<ReporterSpec>;
 }
 
 /**
 	One reporter entry in `BenchkitConfig.reporters`.
-	`outputPath` is required when `name` is `"json"`.
+	`outputDir` is required when `name` is `"json"` (path is
+	`<outputDir>/<haxeVersion>/<config.target>.json`).
 **/
 typedef ReporterSpec = {
 	final name:String;
-	final ?outputPath:String;
+	final ?outputDir:String;
 }
 
 /**
@@ -62,7 +68,7 @@ class Config {
 	public static function reportersFrom(config:BenchkitConfig):Array<Reporter> {
 		final out:Array<Reporter> = [];
 		for (spec in config.reporters)
-			out.push(createReporter(spec));
+			out.push(createReporter(spec, config.target));
 		return out;
 	}
 
@@ -82,32 +88,45 @@ class Config {
 		if (!Std.isOfType(reportersRaw, Array))
 			throw 'why.benchkit: config.reporters must be an array';
 
+		final targetRaw:Dynamic = Reflect.field(raw, 'target');
+		final target:Null<String> = targetRaw == null ? null : Std.string(targetRaw);
+
 		final specs:Array<ReporterSpec> = [];
+		var hasJson = false;
 		for (item in (reportersRaw : Array<Dynamic>)) {
 			if (item == null || !Reflect.isObject(item))
 				throw 'why.benchkit: each config.reporters entry must be an object';
 			final name:Dynamic = Reflect.field(item, 'name');
 			if (name == null || !Std.isOfType(name, String) || (name : String).length == 0)
 				throw 'why.benchkit: reporter config requires a non-empty name';
-			final outputPath:Dynamic = Reflect.field(item, 'outputPath');
+			final nameStr = (name : String);
+			if (nameStr == 'json' && Reflect.hasField(item, 'outputPath') && Reflect.field(item, 'outputPath') != null)
+				throw 'why.benchkit: json reporter uses outputDir (not outputPath)';
+			final outputDir:Dynamic = Reflect.field(item, 'outputDir');
 			final spec:ReporterSpec = {
-				name: (name : String),
-				outputPath: outputPath == null ? null : Std.string(outputPath),
+				name: nameStr,
+				outputDir: outputDir == null ? null : Std.string(outputDir),
 			};
+			if (nameStr == 'json')
+				hasJson = true;
 			specs.push(spec);
 		}
-		return {reporters: specs};
+		if (hasJson && (target == null || target.length == 0))
+			throw 'why.benchkit: config.target is required when a json reporter is present';
+		return {target: target, reporters: specs};
 	}
 
-	static function createReporter(spec:ReporterSpec):Reporter {
+	static function createReporter(spec:ReporterSpec, ?target:String):Reporter {
 		return switch spec.name {
 			case 'console':
 				new ConsoleReporter();
 			case 'json':
-				final path = spec.outputPath;
-				if (path == null || path.length == 0)
-					throw 'why.benchkit: json reporter requires outputPath';
-				new JsonReporter(path);
+				final dir = spec.outputDir;
+				if (dir == null || dir.length == 0)
+					throw 'why.benchkit: json reporter requires outputDir';
+				if (target == null || target.length == 0)
+					throw 'why.benchkit: config.target is required when a json reporter is present';
+				new JsonReporter(dir, target);
 			case other:
 				throw 'why.benchkit: unknown reporter "${other}"';
 		}

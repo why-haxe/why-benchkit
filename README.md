@@ -88,12 +88,15 @@ At the start of `Runner.run`, reporters are loaded from config:
 
 ```json
 {
+  "target": "node",
   "reporters": [
     { "name": "console" },
-    { "name": "json", "outputPath": "out/js.json" }
+    { "name": "json", "outputDir": "out" }
   ]
 }
 ```
+
+Root `target` is required when a `json` reporter is present. The JSON file is written to `<outputDir>/<haxeVersion>/<target>.json` (CLI/host target in the filename, not `BenchmarkResult.target`).
 
 Each reporter’s `report(result:BenchmarkResult)` runs in the suite process. There is no result handoff back to the host.
 
@@ -119,15 +122,15 @@ Per target, the host runs travix `install()` + `buildAndRun()` against `bench.hx
 
 ## JSON output
 
-**Host** — one JSON file per target (recommended; works for browser `js` too):
+**Host** — one nested JSON file per target (recommended; works for browser `js` too):
 
 ```bash
 haxelib run why-benchkit run --targets node,js --json-dir out/
-# → out/node.json, out/js.json
-# (CLI target id in the filename; e.g. --targets interp → out/interp.json)
+# → out/<haxeVersion>/node.json, out/<haxeVersion>/js.json
+# (CLI target id in the filename; e.g. --targets interp → out/<haxeVersion>/interp.json)
 ```
 
-**Standalone** — set `WHY_BENCHKIT_CONFIG` yourself before running the compiled suite (browser: inject `window.why.benchkit`).
+**Standalone** — set `WHY_BENCHKIT_CONFIG` yourself before running the compiled suite (browser: inject `window.why.benchkit`). Use root `target` plus json `outputDir` as in [Reporter config](#reporter-config).
 
 Document shape:
 
@@ -159,7 +162,7 @@ For target `js`, travix runs the suite in a browser (puppeteer). Config inject u
 1. This package ships hooks at `.travix/js/hooks.js`.
 2. Before `JsCommand.buildAndRun`, the host sets `TRAVIX_CONFIG_DIR` to the **absolute** path of that packaged `.travix/` directory.
 3. Hooks read `WHY_BENCHKIT_CONFIG` and set `window.why.benchkit` before page scripts run.
-4. `window.benchkitWriteFile(path, content)` remains available so browser `JsonReporter` can write `outputPath` on the host filesystem.
+4. `window.benchkitWriteFile(path, content)` remains available so browser `JsonReporter` can write the full nested file path on the host filesystem.
 
 `TRAVIX_CONFIG_DIR` **replaces** the consumer’s cwd `.travix` for that run (not a merge). You do not need to write into the consumer’s `.travix/`, and you should not use deprecated `bin/js/run.js` / `run.html` overrides.
 

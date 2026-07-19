@@ -24,7 +24,7 @@ import why.benchkit.host.Targets;
 
 	`--targets` is required (e.g. `--targets interp` or `--targets node,js`).
 	Optional `--json-dir` adds a per-target JSON reporter
-	(`<dir>/<target>.json`) to the injected config alongside console.
+	(`<dir>/<haxeVersion>/<target>.json`) to the injected config alongside console.
 
 	Uses travix's Haxe API directly (no `haxelib run travix` fallback).
 **/
@@ -103,17 +103,21 @@ class HostRun {
 
 	/**
 		Build the suite-process config JSON for one target.
-		Always includes console; adds json under `jsonDir/<target>.json` when set.
+		Always includes console; adds json under `jsonDir/<haxeVersion>/<target>.json`
+		when set (root `target` + reporter `outputDir`).
 	**/
 	static function configJson(target:Target, ?jsonDir:String):String {
 		final reporters:Array<ReporterSpec> = [{name: 'console'}];
 		if (jsonDir != null && jsonDir != '') {
 			reporters.push({
 				name: 'json',
-				outputPath: Path.join([jsonDir, '$target.json']),
+				outputDir: jsonDir,
 			});
 		}
-		final config:BenchkitConfig = {reporters: reporters};
+		final config:BenchkitConfig = {
+			target: target,
+			reporters: reporters,
+		};
 		return Json.stringify(config);
 	}
 
