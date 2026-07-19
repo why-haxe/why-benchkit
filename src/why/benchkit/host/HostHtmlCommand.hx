@@ -1,7 +1,7 @@
 package why.benchkit.host;
 
 /**
-	`why-benchkit html` subcommand: generate a static viewer shell that fetches
+	`why-benchkit html` subcommand: generate a static Chart.js viewer that fetches
 	root/commit manifests and benchmark JSON at runtime (no embedding).
 
 	Local preview requires a static file server (`file://` fetch will fail).
@@ -40,9 +40,9 @@ class HostHtmlCommand {
 	public function new() {}
 
 	/**
-		Generate a static HTML viewer that loads manifests and result JSON via
-		`fetch`. Requires HTTP (e.g. `npx serve` / `python -m http.server`);
-		`file://` will not work.
+		Generate a static Chart.js HTML viewer (+ sibling CSS/JS) that loads
+		manifests and result JSON via `fetch`. Requires HTTP (e.g. `npx serve`
+		/ `python -m http.server`); `file://` will not work.
 	**/
 	@:defaultCommand
 	public function run():Void {
@@ -62,7 +62,8 @@ class HostHtmlCommand {
 					trimmed.length == 0 ? null : trimmed;
 			};
 			HostHtml.generate(outPath, dir, base);
-			Sys.println('why-benchkit: wrote $outPath');
+			final stem = haxe.io.Path.withoutExtension(haxe.io.Path.withoutDirectory(outPath));
+			Sys.println('why-benchkit: wrote $outPath (+ $stem.css / $stem.js)');
 			Sys.println('why-benchkit: preview with a static server (not file://), e.g. npx serve or python -m http.server');
 		} catch (e:Dynamic) {
 			Sys.println(Std.string(e));
