@@ -15,12 +15,17 @@ import why.unit.time.Millisecond;
 	| omitted | set | Fixed warmup; then time-budgeted measurement |
 	| set | set | Fixed warmup + fixed iterations |
 
-	Adaptive algorithms land in later chunks; omitted fields currently use a
-	temporary fixed fallback (`STUB_ITERATIONS` / `STUB_WARMUP`).
+	When `iterations` is omitted, a short probe after warmup chooses a count so
+	the timed loop lasts ~`targetMs`. Adaptive warmup (omitted `warmup`) still
+	uses a temporary fixed fallback (`STUB_WARMUP`) until Chunk 3.
 **/
 class Measure {
-	/** Temporary until Chunk 2 replaces time-budgeted calibration. */
-	static inline final STUB_ITERATIONS:Int = 1000;
+	static inline final DEFAULT_TARGET_MS:Float = 500;
+	static inline final DEFAULT_MIN_ITERATIONS:Int = 1;
+	static inline final DEFAULT_MAX_ITERATIONS:Int = 1_000_000_000;
+	/** Minimum probe wall time (ms) before trusting ms-per-iter. */
+	static inline final MIN_PROBE_MS:Float = 1.0;
+
 	/** Temporary until Chunk 3 replaces adaptive warmup. */
 	static inline final STUB_WARMUP:Int = 10;
 
@@ -43,22 +48,53 @@ class Measure {
 				// Adaptive warmup (Chunk 3) + fixed iterations — stub warmup for now.
 				runFixed(fn, name, iterationsOpt, STUB_WARMUP);
 			case [false, true]:
-				// Fixed warmup + time-budgeted iterations (Chunk 2) — stub iterations for now.
-				runFixed(fn, name, STUB_ITERATIONS, warmupOpt);
+				runTimeBudgeted(fn, name, warmupOpt, opts);
 			case [false, false]:
-				// Full adaptive (Chunks 2–3) — temporary fixed path.
-				runFixed(fn, name, STUB_ITERATIONS, STUB_WARMUP);
+				// Adaptive warmup still stubbed; iterations are time-budgeted.
+				runTimeBudgeted(fn, name, STUB_WARMUP, opts);
 		};
 	}
 
 	/**
 		Fixed warmup + fixed timed iterations.
-		Preserves pre-adaptive behavior when both opts are set; also backs stubs.
+		Preserves pre-adaptive behavior when both opts are set.
 	**/
 	static function runFixed<T>(fn:() -> T, name:String, iterations:Int, warmup:Int):MeasureResult {
+		warmupLoop(fn, warmup);
+		return timedMeasure(fn, name, iterations, warmup);
+	}
+
+	/**
+		Fixed (or stub) warmup, then calibrate iteration count to ~`targetMs`
+		and run a single contiguous timed loop.
+	**/
+	static function runTimeBudgeted<T>(
+		fn:() -> T,
+		name:String,
+		warmup:Int,
+		opts:Null<MeasureOptions>
+	):MeasureResult {
+		warmupLoop(fn, warmup);
+
+		final targetMs = opts?.targetMs ?? DEFAULT_TARGET_MS;
+		final minIterations = opts?.minIterations ?? DEFAULT_MIN_ITERATIONS;
+		final maxIterations = opts?.maxIterations ?? DEFAULT_MAX_ITERATIONS;
+		final iterations = calibrateIterations(fn, targetMs, minIterations, maxIterations);
+
+		return timedMeasure(fn, name, iterations, warmup);
+	}
+
+	static function warmupLoop<T>(fn:() -> T, warmup:Int):Void {
 		for (_ in 0...warmup)
 			Sink.blackHole(fn());
+	}
 
+	static function timedMeasure<T>(
+		fn:() -> T,
+		name:String,
+		iterations:Int,
+		warmup:Int
+	):MeasureResult {
 		final start = Timer.stamp();
 		for (_ in 0...iterations)
 			Sink.blackHole(fn());
@@ -70,5 +106,63 @@ class Measure {
 			iterations: iterations,
 			warmup: warmup,
 		};
+	}
+
+	/**
+		Short timed probe after warmup: grow the batch until wall time is
+		measurable, then `ceil(targetMs / msPerIter)` clamped to
+		`[minIterations, maxIterations]`. Zero / non-finite duration → `maxIterations`.
+	**/
+	static function calibrateIterations<T>(
+		fn:() -> T,
+		targetMs:Float,
+		minIterations:Int,
+		maxIterations:Int
+	):Int {
+		if (!(targetMs > 0) || !Math.isFinite(targetMs))
+			return clampInt(minIterations, minIterations, maxIterations);
+		if (maxIterations < minIterations)
+			return minIterations;
+
+		var batch = 1;
+		var elapsedMs = 0.0;
+
+		while (true) {
+			elapsedMs = timeBatch(fn, batch);
+			if (elapsedMs >= MIN_PROBE_MS || batch >= maxIterations)
+				break;
+			final next = batch > Math.floor(maxIterations / 2) ? maxIterations : batch * 2;
+			if (next == batch)
+				break;
+			batch = next;
+		}
+
+		if (!(elapsedMs > 0) || !Math.isFinite(elapsedMs))
+			return maxIterations;
+
+		final msPerIter = elapsedMs / batch;
+		if (!(msPerIter > 0) || !Math.isFinite(msPerIter))
+			return maxIterations;
+
+		final estimated = targetMs / msPerIter;
+		if (!Math.isFinite(estimated) || estimated >= maxIterations)
+			return maxIterations;
+
+		return clampInt(Std.int(Math.ceil(estimated)), minIterations, maxIterations);
+	}
+
+	static function timeBatch<T>(fn:() -> T, count:Int):Float {
+		final start = Timer.stamp();
+		for (_ in 0...count)
+			Sink.blackHole(fn());
+		return (Timer.stamp() - start) * 1000.0;
+	}
+
+	static function clampInt(value:Int, min:Int, max:Int):Int {
+		if (value < min)
+			return min;
+		if (value > max)
+			return max;
+		return value;
 	}
 }
