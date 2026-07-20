@@ -21,7 +21,7 @@ class HostHtml {
 		by `fetch` (trailing slash). When null, computed as the relative path
 		from the HTML’s parent directory to `jsonDir`.
 	**/
-	public static function generate(outPath:String, jsonDir:String, ?jsonBase:String):Void {
+	public static function generate(outPath:String, jsonDir:String, ?jsonBase:String, title:String = 'why-benchkit'):Void {
 		final outAbs = outPath.normalize();
 		final jsonAbs = jsonDir.normalize();
 
@@ -47,7 +47,7 @@ class HostHtml {
 
 		cssAbs.saveContent(renderCss());
 		jsAbs.saveContent(renderJs());
-		outAbs.saveContent(renderHtml(base, cssName, jsName));
+		outAbs.saveContent(renderHtml(base, cssName, jsName, title));
 	}
 
 	/**
@@ -94,14 +94,16 @@ class HostHtml {
 		normalized.createDirectory();
 	}
 
-	static function renderHtml(jsonBase:String, cssName:String, jsName:String):String {
+	static function renderHtml(jsonBase:String, cssName:String, jsName:String, title:String):String {
 		final escapedBase = escapeJsString(jsonBase);
 		final escapedCss = escapeHtmlAttr(cssName);
 		final escapedJs = escapeHtmlAttr(jsName);
+		final escapedTitle = escapeHtml(title);
 		return renderTemplate('index.html', {
 			escapedBase: escapedBase,
 			escapedCss: escapedCss,
 			escapedJs: escapedJs,
+			escapedTitle: escapedTitle,
 		});
 	}
 
@@ -135,7 +137,11 @@ class HostHtml {
 			.join('\\u2029');
 	}
 
+	static function escapeHtml(s:String):String {
+		return s.split('&').join('&amp;').split('<').join('&lt;').split('>').join('&gt;');
+	}
+
 	static function escapeHtmlAttr(s:String):String {
-		return s.split('&').join('&amp;').split('"').join('&quot;').split('<').join('&lt;');
+		return escapeHtml(s).split('"').join('&quot;');
 	}
 }

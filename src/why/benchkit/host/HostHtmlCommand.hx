@@ -1,5 +1,7 @@
 package why.benchkit.host;
 
+using StringTools;
+
 /**
 	`why-benchkit html` subcommand: generate a static Chart.js viewer that fetches
 	root/commit manifests and benchmark JSON at runtime (no embedding).
@@ -37,6 +39,13 @@ class HostHtmlCommand {
 	@:optional
 	public var jsonBase:String;
 
+	/**
+		Page title used in `<title>` and the header `<h1>` (default: why-benchkit).
+	**/
+	@:flag('title')
+	@:alias(false)
+	public var title:String = 'why-benchkit';
+
 	public function new() {}
 
 	/**
@@ -54,14 +63,19 @@ class HostHtmlCommand {
 				Sys.exit(1);
 				return;
 			}
-			final base = switch jsonBase {
+			final base = switch jsonBase?.trim() {
 				case null | '':
 					null;
 				case s:
-					final trimmed = StringTools.trim(s);
-					trimmed.length == 0 ? null : trimmed;
+					s;
 			};
-			HostHtml.generate(outPath, dir, base);
+			final pageTitle = switch title?.trim() {
+				case null | '':
+					'why-benchkit';
+				case s:
+					s;
+			};
+			HostHtml.generate(outPath, dir, base, pageTitle);
 			final stem = haxe.io.Path.withoutExtension(haxe.io.Path.withoutDirectory(outPath));
 			Sys.println('why-benchkit: wrote $outPath (+ $stem.css / $stem.js)');
 			Sys.println('why-benchkit: preview with a static server (not file://), e.g. npx serve or python -m http.server');
