@@ -3,6 +3,7 @@ package why.benchkit;
 import why.benchkit.host.HostHtmlCommand;
 import why.benchkit.host.HostManifestCommand;
 import why.benchkit.host.HostRunCommand;
+import why.benchkit.host.HostSyncCommand;
 
 /**
 	Haxelib / lix run entry (`"main": "why.benchkit.Run"` in haxelib.json).
@@ -30,11 +31,18 @@ class Run {
 	@:command
 	public final html:HostHtmlCommand;
 
+	/**
+		Additively sync a local JSON tree onto a dest branch (commit; optional push)
+	**/
+	@:command
+	public final sync:HostSyncCommand;
+
 	public function new(libraryRoot:String) {
 		this.libraryRoot = libraryRoot;
 		this.run = new HostRunCommand(libraryRoot);
 		this.manifest = new HostManifestCommand();
 		this.html = new HostHtmlCommand();
+		this.sync = new HostSyncCommand();
 	}
 
 	static function main():Void {

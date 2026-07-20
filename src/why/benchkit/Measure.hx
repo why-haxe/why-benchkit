@@ -23,14 +23,16 @@ import why.unit.time.Millisecond;
 	`adaptiveWarmup` / `measureTimeBudgeted`; explicit values always win.
 **/
 class Measure {
-	static inline final DEFAULT_TARGET_MS:Float = 500;
+	static inline final DEFAULT_TARGET_MS:Float = 250;
 	static inline final DEFAULT_MIN_ITERATIONS:Int = 1;
 	static inline final DEFAULT_MAX_ITERATIONS:Int = 1_000_000_000;
 	static inline final DEFAULT_WARMUP_TOLERANCE:Float = 0.02;
 	static inline final DEFAULT_WARMUP_PATIENCE:Int = 3;
 	static inline final DEFAULT_MAX_WARMUP_MS:Float = 3000;
+
 	/** Minimum batches before stability may stop adaptive warmup. */
 	static inline final MIN_WARMUP_BATCHES:Int = 2;
+
 	/** Minimum probe / batch wall time (ms) before trusting ms-per-iter. */
 	static inline final MIN_PROBE_MS:Float = 1.0;
 
@@ -75,12 +77,7 @@ class Measure {
 		After warmup already done: calibrate iteration count to ~`targetMs`
 		and run a single contiguous timed loop.
 	**/
-	static function measureTimeBudgeted<T>(
-		fn:() -> T,
-		name:String,
-		warmup:Int,
-		opts:Null<MeasureOptions>
-	):MeasureResult {
+	static function measureTimeBudgeted<T>(fn:() -> T, name:String, warmup:Int, opts:Null<MeasureOptions>):MeasureResult {
 		final targetMs = opts?.targetMs ?? DEFAULT_TARGET_MS;
 		final minIterations = opts?.minIterations ?? DEFAULT_MIN_ITERATIONS;
 		final maxIterations = opts?.maxIterations ?? DEFAULT_MAX_ITERATIONS;
@@ -169,12 +166,7 @@ class Measure {
 		return totalIterations;
 	}
 
-	static function timedMeasure<T>(
-		fn:() -> T,
-		name:String,
-		iterations:Int,
-		warmup:Int
-	):MeasureResult {
+	static function timedMeasure<T>(fn:() -> T, name:String, iterations:Int, warmup:Int):MeasureResult {
 		final start = Timer.stamp();
 		for (_ in 0...iterations)
 			Sink.blackHole(fn());
@@ -193,12 +185,7 @@ class Measure {
 		measurable, then `ceil(targetMs / msPerIter)` clamped to
 		`[minIterations, maxIterations]`. Zero / non-finite duration → `maxIterations`.
 	**/
-	static function calibrateIterations<T>(
-		fn:() -> T,
-		targetMs:Float,
-		minIterations:Int,
-		maxIterations:Int
-	):Int {
+	static function calibrateIterations<T>(fn:() -> T, targetMs:Float, minIterations:Int, maxIterations:Int):Int {
 		if (!(targetMs > 0) || !Math.isFinite(targetMs))
 			return clampInt(minIterations, minIterations, maxIterations);
 		if (maxIterations < minIterations)

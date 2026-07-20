@@ -152,6 +152,15 @@ haxelib run why-benchkit manifest --json-dir out/
 lix run why-benchkit manifest --json-dir out/
 ```
 
+Additively sync a local JSON tree onto another git branch (skips `_dirty`; commits by default; `--push` optional):
+
+```bash
+haxelib run why-benchkit sync --source-dir=out/ --dest-branch=gh-pages --dest-dir=bench-data/
+lix run why-benchkit sync --source-dir=out/ --dest-branch=gh-pages --dest-dir=bench-data/ --push
+```
+
+See [GitHub Pages → Sync](#sync-onto-a-publish-branch-sync) for Actions requirements.
+
 ### Static viewer (`html`)
 
 Generate a Chart.js page that **fetches** root/commit manifests and result JSON at runtime (nothing embedded):
@@ -178,6 +187,8 @@ lix run why-benchkit run --targets interp,node --json-dir=bench-out/
 
 lix run why-benchkit manifest --json-dir=bench-out/
 lix run why-benchkit html --out=bench-viewer/index.html --json-dir=bench-out/
+# optional: sync JSON onto another branch (see GitHub Pages → Sync)
+# lix run why-benchkit sync --source-dir=bench-out/ --dest-branch=gh-pages --dest-dir=bench-data/
 
 # from repo root (or any parent that can serve both paths):
 cd ../..
@@ -253,6 +264,8 @@ Document shape:
 
 Publish the viewer and the JSON tree under the **same origin** so relative `fetch` works.
 
+### Same-branch `docs/` layout
+
 1. Accumulate history with a clean working tree: `why-benchkit run --targets … --json-dir docs/bench-data/` (or any folder you will deploy).
 2. Generate the viewer into the Pages root (or a subpath):  
    `why-benchkit html --out=docs/index.html --json-dir=docs/bench-data/`  
@@ -274,6 +287,48 @@ docs/
 ```
 
 Local preview of the same layout: `python3 -m http.server` from the parent of `docs/`, then open `/docs/`.
+
+### Sync onto a publish branch (`sync`)
+
+When JSON should live on another branch (e.g. `gh-pages`) instead of `docs/` on main:
+
+```bash
+# After accumulating results under out/ on the current branch:
+why-benchkit sync --source-dir=out/ --dest-branch=gh-pages --dest-dir=bench-data/
+# Commit only (default). Add --push to also push origin/gh-pages:
+why-benchkit sync --source-dir=out/ --dest-branch=gh-pages --dest-dir=bench-data/ --push
+```
+
+- **Additive:** copies each clean `<sha>/` from `--source-dir` into `--dest-dir` on `--dest-branch` (overwrites matching shas; keeps dest-only shas). Never copies `_dirty/`. Rebuilds root `manifest.json` on the dest tree.
+- Uses a temporary `git worktree` (current checkout can be detached — fine on GitHub Actions).
+- If `--dest-branch` does not exist locally or on `origin`, creates an orphan empty branch.
+- Commits when the dest tree changed; no empty commits. `--push` runs `git push origin HEAD:<dest-branch>`.
+
+#### GitHub Actions requirements
+
+| Requirement | Why |
+| --- | --- |
+| `actions/checkout` with a token that can write (`GITHUB_TOKEN` or PAT) | Push needs write access |
+| `permissions: contents: write` | Workflow token scope |
+| Fetch dest branch history (`fetch-depth: 0` **or** `git fetch origin <dest-branch>` before sync) | Worktree / orphan detection needs the remote ref |
+| Configure `user.name` / `user.email` before sync | Commit fails otherwise (Actions does not set them by default) |
+| Detached HEAD is fine | Sync never checks out the dest branch in the main workspace |
+
+```yaml
+permissions:
+  contents: write
+steps:
+  - uses: actions/checkout@v4
+    with:
+      fetch-depth: 0
+  - run: |
+      git config user.name "github-actions[bot]"
+      git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+  # … run benches into e.g. out/ …
+  - run: lix run why-benchkit sync --source-dir=out/ --dest-branch=gh-pages --dest-dir=bench-data/ --push
+```
+
+Branch protection / required reviews on the publish branch may block `GITHUB_TOKEN` pushes — use a PAT or relax rules for that branch.
 
 ## Browser JS (`TRAVIX_CONFIG_DIR`)
 

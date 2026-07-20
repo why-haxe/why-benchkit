@@ -1,0 +1,8 @@
+# HostSync smoke (interp, temporary git repo).
+# Usage: haxe sync.hxml
+-cp src
+-cp tests
+-lib travix
+-lib why-unit
+-main SyncSmoke
+--interp

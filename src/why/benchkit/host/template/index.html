@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<meta charset="utf-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1" />
+		<title>why-benchkit</title>
+		<link rel="stylesheet" href="$escapedCss" />
+	</head>
+	<body>
+		<header class="page-header">
+			<h1>why-benchkit</h1>
+			<p class="meta">
+				Historical benchmark charts — data loaded via <code>fetch</code> (no
+				embedding).
+			</p>
+			<p class="note">
+				Serve this page over HTTP (e.g. <code>npx serve</code> or
+				<code>python -m http.server</code>). Opening via
+				<code>file://</code> will fail because browsers block local
+				<code>fetch</code>.
+			</p>
+			<p class="meta">JSON base: <code id="json-base"></code></p>
+		</header>
+
+		<div id="status" class="status">Loading…</div>
+
+		<section id="controls" class="controls" hidden>
+			<label>
+				<span>Haxe</span>
+				<select id="sel-haxe"></select>
+			</label>
+			<label>
+				<span>Target</span>
+				<select id="sel-target"></select>
+			</label>
+			<label>
+				<span>Suite</span>
+				<select id="sel-suite"></select>
+			</label>
+			<label id="dirty-label" class="checkbox" hidden>
+				<input type="checkbox" id="chk-dirty" />
+				<span>Show dirty overlay</span>
+			</label>
+		</section>
+
+		<p id="empty" class="empty" hidden></p>
+		<div id="charts" class="charts"></div>
+
+		<script>
+			window.WHY_BENCHKIT = { jsonBase: "$escapedBase" };
+		</script>
+		<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+		<script src="$escapedJs"></script>
+	</body>
+</html>

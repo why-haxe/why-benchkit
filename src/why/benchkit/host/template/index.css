@@ -1,0 +1,115 @@
+:root {
+	color-scheme: light dark;
+	--fg: #1a1a1a;
+	--muted: #666;
+	--border: #d4d4d8;
+	--bg-note: #f4f4f5;
+	--bg-pre: #f4f4f5;
+	--accent: #0b57d0;
+	--danger: #b00020;
+	font-family: ui-sans-serif, system-ui, sans-serif;
+}
+@media (prefers-color-scheme: dark) {
+	:root {
+		--fg: #e8e8e8;
+		--muted: #aaa;
+		--border: #3f3f46;
+		--bg-note: #222;
+		--bg-pre: #1a1a1a;
+		--accent: #8ab4f8;
+		--danger: #ff8a80;
+	}
+}
+body {
+	margin: 1.5rem;
+	line-height: 1.45;
+	max-width: 64rem;
+	color: var(--fg);
+}
+.page-header h1 {
+	font-size: 1.25rem;
+	margin: 0 0 0.5rem;
+}
+.meta {
+	color: var(--muted);
+	font-size: 0.9rem;
+	margin: 0.35rem 0;
+}
+.note {
+	background: var(--bg-note);
+	padding: 0.75rem 1rem;
+	border-radius: 6px;
+	font-size: 0.9rem;
+	margin: 0.75rem 0 1rem;
+}
+.status {
+	margin: 1rem 0;
+}
+.status.err {
+	color: var(--danger);
+	white-space: pre-wrap;
+}
+.controls {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 0.75rem 1.25rem;
+	align-items: flex-end;
+	margin: 1.25rem 0;
+	padding: 0.75rem 0;
+	border-top: 1px solid var(--border);
+	border-bottom: 1px solid var(--border);
+}
+.controls label {
+	display: flex;
+	flex-direction: column;
+	gap: 0.25rem;
+	font-size: 0.85rem;
+}
+.controls label.checkbox {
+	flex-direction: row;
+	align-items: center;
+	gap: 0.4rem;
+	padding-bottom: 0.35rem;
+}
+.controls span {
+	color: var(--muted);
+}
+.controls select {
+	font: inherit;
+	min-width: 10rem;
+	padding: 0.35rem 0.5rem;
+	border: 1px solid var(--border);
+	border-radius: 4px;
+	background: transparent;
+	color: inherit;
+}
+.empty {
+	color: var(--muted);
+	font-style: italic;
+	margin: 1.25rem 0;
+}
+.charts {
+	display: flex;
+	flex-direction: column;
+	gap: 1.5rem;
+	margin: 1.25rem 0 2rem;
+}
+.chart-card h2 {
+	font-size: 1rem;
+	font-weight: 600;
+	margin: 0 0 0.5rem;
+}
+.chart-card .chart-meta {
+	color: var(--muted);
+	font-size: 0.8rem;
+	margin: 0 0 0.5rem;
+}
+.chart-wrap {
+	position: relative;
+	height: 280px;
+	max-width: 100%;
+}
+code {
+	font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+	font-size: 0.85rem;
+}

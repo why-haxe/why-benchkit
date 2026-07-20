@@ -9,6 +9,14 @@ Prefer modern Haxe syntax where it fits:
 - Prefer named-argument function types (`(name:Type) -> Ret`) over positional-only forms when declaring function types.
 - Use type-safe values from `why-unit` library where applicable
 
+### Functional style
+
+Prefer a functional programming paradigm:
+
+- Prefer pure functions: same inputs → same outputs, no hidden mutation or I/O.
+- Keep side effects (I/O, mutable state, process/env interaction) clearly isolated at the edges — e.g. command handlers, host adapters — not scattered through core logic.
+- Prefer transforming data with expressions (`map`, `filter`, immutable updates) over imperative mutation when practical.
+
 ### Explicit member types
 
 All member functions must declare argument and return types explicitly.

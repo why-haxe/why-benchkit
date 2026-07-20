@@ -13,15 +13,11 @@ class MyLibSuite {
 	public function new() {}
 
 	@:name("op.name")
-	@:warmup(100)
-	@:iterations(1000000)
 	public function opName():Dynamic {
 		return doWork();
 	}
 
 	@:name("op.hot")
-	@:warmup(100)
-	@:iterations(1000000)
 	public function opHot():String {
 		return hot();
 	}
