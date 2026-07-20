@@ -18,6 +18,9 @@ import why.unit.time.Millisecond;
 	When `iterations` is omitted, a short probe after warmup chooses a count so
 	the timed loop lasts ~`targetMs`. When `warmup` is omitted, batches run
 	until successive batch means stabilize (or `maxWarmupMs` / iteration caps).
+
+	All four modes are fully wired (no stubs): adaptive paths use
+	`adaptiveWarmup` / `measureTimeBudgeted`; explicit values always win.
 **/
 class Measure {
 	static inline final DEFAULT_TARGET_MS:Float = 500;
@@ -43,16 +46,17 @@ class Measure {
 		if (warmupOpt != null && warmupOpt < 0)
 			throw "why.benchkit.Measure.run: warmup must be >= 0";
 
+		// Four-mode matrix: every arm is live (adaptiveWarmup / calibrate / fixed).
 		return switch [iterationsOpt != null, warmupOpt != null] {
-			case [true, true]:
+			case [true, true]: // set / set
 				runFixed(fn, name, iterationsOpt, warmupOpt);
-			case [true, false]:
+			case [true, false]: // set / omitted → adaptive warmup + fixed iterations
 				final warmup = adaptiveWarmup(fn, opts);
 				timedMeasure(fn, name, iterationsOpt, warmup);
-			case [false, true]:
+			case [false, true]: // omitted / set → fixed warmup + time-budgeted measure
 				warmupLoop(fn, warmupOpt);
 				measureTimeBudgeted(fn, name, warmupOpt, opts);
-			case [false, false]:
+			case [false, false]: // omitted / omitted → adaptive warmup + time-budgeted measure
 				final warmup = adaptiveWarmup(fn, opts);
 				measureTimeBudgeted(fn, name, warmup, opts);
 		};

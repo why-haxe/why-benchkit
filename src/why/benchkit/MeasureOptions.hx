@@ -4,8 +4,8 @@ package why.benchkit;
 	Options for `Measure.run`.
 
 	When `iterations` and/or `warmup` are omitted, measurement uses adaptive mode
-	(see `Measure.run`). Explicit values always win. Adaptive knobs below only
-	apply when the corresponding adaptive path is active.
+	(see `Measure.run` four-mode matrix). Explicit values always win. Adaptive
+	knobs below only apply when the corresponding adaptive path is active.
 **/
 typedef MeasureOptions = {
 	/** Measurement name (defaults to empty when omitted). */

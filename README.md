@@ -58,8 +58,9 @@ class BenchSuite {
 class MySuite {
 	public function new() {}
 
-	@:warmup(50) // optional: overrides default
-	@:iterations(100000) // optional: overrides default
+	// Omit @:warmup / @:iterations for adaptive measure (see below).
+	@:warmup(50) // optional: fixed warmup count
+	@:iterations(100000) // optional: fixed timed iterations
 	@:name("do-work") // optional: defaults to method name
 	public function doWork() {
 		return work(); // return a value so DCE cannot erase the work
@@ -69,13 +70,34 @@ class MySuite {
 
 The macro discovers each suite’s public instance methods and treats them as measure items.
 
+### Adaptive measure
+
+When `@:warmup` / `@:iterations` (or the same fields on `Measure.run` opts) are **omitted**, measurement adapts instead of using fixed defaults. Explicit values always override.
+
+| `iterations` | `warmup` | Behavior |
+| --- | --- | --- |
+| omitted | omitted | Adaptive warmup, then time-budgeted timed loop |
+| set | omitted | Adaptive warmup, then exactly `iterations` timed runs |
+| omitted | set | Fixed warmup, then time-budgeted timed loop |
+| set | set | Fixed warmup + fixed iterations |
+
+Time-budgeted mode targets ~`targetMs` of timed work (default **500** ms) by calibrating iteration count after warmup. Adaptive warmup stops when successive batch costs stabilize (or hits a hard time/iteration cap). Results always report the **actual** `iterations` and `warmup` counts used.
+
 Low-level escape hatch:
 
 ```haxe
 import why.benchkit.Measure;
 
+// Fully adaptive (omitted iterations/warmup):
+final a = Measure.run(() -> work(), { name: "op" });
+// a.iterations / a.warmup are the counts actually used; a.duration is the timed loop
+
+// Fixed mode (both set) — same as pre-adaptive for given numbers:
 final r = Measure.run(() -> work(), { name: "op", iterations: 1000, warmup: 10 });
 // r.name, r.duration (why.unit.time.Millisecond)
+
+// Optional knobs when adaptive paths are active, e.g. shorter budget:
+final b = Measure.run(() -> work(), { name: "op", targetMs: 100 });
 ```
 
 ## Reporter config
