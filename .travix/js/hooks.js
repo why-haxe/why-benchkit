@@ -27,6 +27,8 @@ module.exports = {
 			fs.writeFileSync(filePath, content, "utf8");
 		});
 
+		page.setDefaultNavigationTimeout(0);
+
 		await page.evaluateOnNewDocument((config) => {
 			window.why = window.why || {};
 			window.why.benchkit = config;
