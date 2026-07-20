@@ -1,9 +1,11 @@
 package why.benchkit.host;
 
-import haxe.io.Path;
-import sys.FileSystem;
-import sys.io.File;
-import why.benchkit.host.template.Template;
+import why.benchkit.Macro;
+
+using sys.FileSystem;
+using sys.io.File;
+using haxe.io.Path;
+using StringTools;
 
 /**
 	Generate a static Chart.js viewer that fetches root/commit manifests and
@@ -20,13 +22,13 @@ class HostHtml {
 		from the HTML’s parent directory to `jsonDir`.
 	**/
 	public static function generate(outPath:String, jsonDir:String, ?jsonBase:String):Void {
-		final outAbs = Path.normalize(outPath);
-		final jsonAbs = Path.normalize(jsonDir);
+		final outAbs = outPath.normalize();
+		final jsonAbs = jsonDir.normalize();
 
 		if (!FileSystem.exists(jsonAbs) || !FileSystem.isDirectory(jsonAbs))
 			throw 'why-benchkit: not a directory: $jsonAbs';
 
-		final outDir = Path.directory(outAbs);
+		final outDir = outAbs.directory();
 		if (outDir != null && outDir.length > 0)
 			ensureDir(outDir);
 
@@ -34,18 +36,18 @@ class HostHtml {
 			case null | '':
 				ensureTrailingSlash(relativePath(outDir == null || outDir.length == 0 ? Sys.getCwd() : outDir, jsonAbs));
 			case s:
-				ensureTrailingSlash(StringTools.trim(s));
+				ensureTrailingSlash(s.trim());
 		};
 
-		final stem = Path.withoutExtension(Path.withoutDirectory(outAbs));
+		final stem = outAbs.withoutDirectory().withoutExtension();
 		final cssName = stem + '.css';
 		final jsName = stem + '.js';
 		final cssAbs = Path.join([outDir == null || outDir.length == 0 ? Sys.getCwd() : outDir, cssName]);
 		final jsAbs = Path.join([outDir == null || outDir.length == 0 ? Sys.getCwd() : outDir, jsName]);
 
-		File.saveContent(cssAbs, renderCss());
-		File.saveContent(jsAbs, renderJs());
-		File.saveContent(outAbs, renderHtml(base, cssName, jsName));
+		cssAbs.saveContent(renderCss());
+		jsAbs.saveContent(renderJs());
+		outAbs.saveContent(renderHtml(base, cssName, jsName));
 	}
 
 	/**
@@ -53,8 +55,8 @@ class HostHtml {
 		Both paths should be absolute or equally rooted.
 	**/
 	public static function relativePath(fromDir:String, toPath:String):String {
-		final fromParts = splitPath(Path.normalize(fromDir));
-		final toParts = splitPath(Path.normalize(toPath));
+		final fromParts = splitPath(fromDir.normalize());
+		final toParts = splitPath(toPath.normalize());
 
 		var i = 0;
 		final n = fromParts.length < toParts.length ? fromParts.length : toParts.length;
@@ -71,42 +73,49 @@ class HostHtml {
 
 	static function splitPath(path:String):Array<String> {
 		// Normalize separators so Windows `\` paths still produce URL-safe `/` relatives.
-		final parts = Path.normalize(path).split('\\').join('/').split('/');
+		final parts = path.normalize().replace('\\', '/').split('/');
 		return [for (p in parts) if (p.length > 0) p];
 	}
 
 	static function ensureTrailingSlash(s:String):String {
-		if (s.length == 0 || s == '.')
-			return './';
-		return StringTools.endsWith(s, '/') ? s : s + '/';
+		return s.length == 0 ? './' : s.addTrailingSlash();
 	}
 
 	static function ensureDir(path:String):Void {
-		final normalized = Path.normalize(path);
-		if (FileSystem.exists(normalized)) {
-			if (!FileSystem.isDirectory(normalized))
+		final normalized = path.normalize();
+		if (normalized.exists()) {
+			if (!normalized.isDirectory())
 				throw 'why-benchkit: not a directory: $normalized';
 			return;
 		}
 		final parent = Path.directory(normalized);
 		if (parent != null && parent.length > 0 && parent != normalized)
 			ensureDir(parent);
-		FileSystem.createDirectory(normalized);
+		normalized.createDirectory();
 	}
 
 	static function renderHtml(jsonBase:String, cssName:String, jsName:String):String {
 		final escapedBase = escapeJsString(jsonBase);
 		final escapedCss = escapeHtmlAttr(cssName);
 		final escapedJs = escapeHtmlAttr(jsName);
-		return Template.load('index.html');
+		return renderTemplate('index.html', {
+			escapedBase: escapedBase,
+			escapedCss: escapedCss,
+			escapedJs: escapedJs,
+		});
 	}
 
 	static function renderCss():String {
-		return Template.load('index.css');
+		return renderTemplate('index.css');
 	}
 
 	static function renderJs():String {
-		return Template.load('index.js');
+		return renderTemplate('index.js');
+	}
+
+	static function renderTemplate(template:String, ?data:Dynamic):String {
+		final template = Path.join([Macro.sourcePath().directory(), 'template/$template']);
+		return new haxe.Template(template.getContent()).execute(data ?? {});
 	}
 
 	static function escapeJsString(s:String):String {
