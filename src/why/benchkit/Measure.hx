@@ -39,7 +39,10 @@ class Measure {
 	function new() {}
 
 	public static function run<T>(fn:() -> T, ?opts:MeasureOptions):MeasureResult {
-		switch opts?.warmup {
+		var warmup = opts?.warmup;
+		var iterations = opts?.iterations;
+
+		switch warmup {
 			case null:
 				warmup = doAdaptiveWarmup(fn, opts);
 			case v if (v < 0):
@@ -48,7 +51,7 @@ class Measure {
 				doWarmup(fn, v);
 		}
 
-		final duration = switch opts?.iterations {
+		final duration = switch iterations {
 			case null:
 				final timed = doTimeBudgetedMeasure(fn, opts);
 				iterations = timed.iterations;
