@@ -36,7 +36,7 @@ class SuiteSmokeCases {
 		return sum;
 	}
 
-	/** Iterations override only; warmup uses Measure default. */
+	/** Iterations override only; omitted warmup → adaptive warmup. */
 	@:name("sum.partial")
 	@:iterations(8000)
 	public function sumPartial():Int {
