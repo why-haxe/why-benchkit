@@ -16,18 +16,20 @@ import why.unit.time.Millisecond;
 	| set | set | Fixed warmup + fixed iterations |
 
 	When `iterations` is omitted, a short probe after warmup chooses a count so
-	the timed loop lasts ~`targetMs`. Adaptive warmup (omitted `warmup`) still
-	uses a temporary fixed fallback (`STUB_WARMUP`) until Chunk 3.
+	the timed loop lasts ~`targetMs`. When `warmup` is omitted, batches run
+	until successive batch means stabilize (or `maxWarmupMs` / iteration caps).
 **/
 class Measure {
 	static inline final DEFAULT_TARGET_MS:Float = 500;
 	static inline final DEFAULT_MIN_ITERATIONS:Int = 1;
 	static inline final DEFAULT_MAX_ITERATIONS:Int = 1_000_000_000;
-	/** Minimum probe wall time (ms) before trusting ms-per-iter. */
+	static inline final DEFAULT_WARMUP_TOLERANCE:Float = 0.02;
+	static inline final DEFAULT_WARMUP_PATIENCE:Int = 3;
+	static inline final DEFAULT_MAX_WARMUP_MS:Float = 3000;
+	/** Minimum batches before stability may stop adaptive warmup. */
+	static inline final MIN_WARMUP_BATCHES:Int = 2;
+	/** Minimum probe / batch wall time (ms) before trusting ms-per-iter. */
 	static inline final MIN_PROBE_MS:Float = 1.0;
-
-	/** Temporary until Chunk 3 replaces adaptive warmup. */
-	static inline final STUB_WARMUP:Int = 10;
 
 	function new() {}
 
@@ -45,13 +47,14 @@ class Measure {
 			case [true, true]:
 				runFixed(fn, name, iterationsOpt, warmupOpt);
 			case [true, false]:
-				// Adaptive warmup (Chunk 3) + fixed iterations — stub warmup for now.
-				runFixed(fn, name, iterationsOpt, STUB_WARMUP);
+				final warmup = adaptiveWarmup(fn, opts);
+				timedMeasure(fn, name, iterationsOpt, warmup);
 			case [false, true]:
-				runTimeBudgeted(fn, name, warmupOpt, opts);
+				warmupLoop(fn, warmupOpt);
+				measureTimeBudgeted(fn, name, warmupOpt, opts);
 			case [false, false]:
-				// Adaptive warmup still stubbed; iterations are time-budgeted.
-				runTimeBudgeted(fn, name, STUB_WARMUP, opts);
+				final warmup = adaptiveWarmup(fn, opts);
+				measureTimeBudgeted(fn, name, warmup, opts);
 		};
 	}
 
@@ -65,28 +68,101 @@ class Measure {
 	}
 
 	/**
-		Fixed (or stub) warmup, then calibrate iteration count to ~`targetMs`
+		After warmup already done: calibrate iteration count to ~`targetMs`
 		and run a single contiguous timed loop.
 	**/
-	static function runTimeBudgeted<T>(
+	static function measureTimeBudgeted<T>(
 		fn:() -> T,
 		name:String,
 		warmup:Int,
 		opts:Null<MeasureOptions>
 	):MeasureResult {
-		warmupLoop(fn, warmup);
-
 		final targetMs = opts?.targetMs ?? DEFAULT_TARGET_MS;
 		final minIterations = opts?.minIterations ?? DEFAULT_MIN_ITERATIONS;
 		final maxIterations = opts?.maxIterations ?? DEFAULT_MAX_ITERATIONS;
 		final iterations = calibrateIterations(fn, targetMs, minIterations, maxIterations);
-
 		return timedMeasure(fn, name, iterations, warmup);
 	}
 
 	static function warmupLoop<T>(fn:() -> T, warmup:Int):Void {
 		for (_ in 0...warmup)
 			Sink.blackHole(fn());
+	}
+
+	/**
+		Adaptive warmup: run timed batches until successive per-iter means stay
+		within `warmupTolerance` for `warmupPatience` consecutive comparisons,
+		after at least `MIN_WARMUP_BATCHES`. Batches faster than `MIN_PROBE_MS`
+		are grown (not counted toward patience). Always terminates via
+		`maxWarmupMs` and/or a total-iteration cap (`maxIterations`).
+		Returns total warmup iterations actually run.
+	**/
+	static function adaptiveWarmup<T>(fn:() -> T, opts:Null<MeasureOptions>):Int {
+		final tolerance = opts?.warmupTolerance ?? DEFAULT_WARMUP_TOLERANCE;
+		final patience = Std.int(Math.max(1, opts?.warmupPatience ?? DEFAULT_WARMUP_PATIENCE));
+		final maxWarmupMs = opts?.maxWarmupMs ?? DEFAULT_MAX_WARMUP_MS;
+		final maxIterations = opts?.maxIterations ?? DEFAULT_MAX_ITERATIONS;
+
+		var totalIterations = 0;
+		var batchSize = 1;
+		var batches = 0;
+		var stableCount = 0;
+		var prevMean:Null<Float> = null;
+		final start = Timer.stamp();
+
+		while (true) {
+			final elapsedMs = (Timer.stamp() - start) * 1000.0;
+
+			if (totalIterations >= maxIterations)
+				break;
+			// Hard stop: always terminate once at least one batch ran.
+			if (batches >= 1 && elapsedMs >= maxWarmupMs)
+				break;
+
+			final remaining = maxIterations - totalIterations;
+			if (remaining < 1)
+				break;
+			if (batchSize > remaining)
+				batchSize = remaining;
+
+			final batchMs = timeBatch(fn, batchSize);
+			totalIterations += batchSize;
+			batches++;
+
+			// Only trust means from batches that meet MIN_PROBE_MS; faster batches
+			// grow until measurable so patience cannot stop on timer noise.
+			if (batchMs < MIN_PROBE_MS) {
+				stableCount = 0;
+				prevMean = null;
+				final afterRemaining = maxIterations - totalIterations;
+				if (afterRemaining > batchSize) {
+					final next = batchSize > Math.floor(afterRemaining / 2) ? afterRemaining : batchSize * 2;
+					batchSize = next < 1 ? 1 : next;
+				}
+			} else {
+				final mean = batchMs / batchSize;
+				if (prevMean != null && isPositiveFinite(prevMean) && isPositiveFinite(mean)) {
+					final relChange = Math.abs(mean - prevMean) / prevMean;
+					if (relChange <= tolerance) {
+						stableCount++;
+						if (batches >= MIN_WARMUP_BATCHES && stableCount >= patience)
+							break;
+					} else {
+						stableCount = 0;
+					}
+				} else {
+					stableCount = 0;
+				}
+				prevMean = mean;
+			}
+
+			// Re-check hard stop after the batch (wall clock advanced).
+			final afterMs = (Timer.stamp() - start) * 1000.0;
+			if (afterMs >= maxWarmupMs)
+				break;
+		}
+
+		return totalIterations;
 	}
 
 	static function timedMeasure<T>(
@@ -156,6 +232,10 @@ class Measure {
 		for (_ in 0...count)
 			Sink.blackHole(fn());
 		return (Timer.stamp() - start) * 1000.0;
+	}
+
+	static function isPositiveFinite(value:Float):Bool {
+		return value > 0 && Math.isFinite(value);
 	}
 
 	static function clampInt(value:Int, min:Int, max:Int):Int {
