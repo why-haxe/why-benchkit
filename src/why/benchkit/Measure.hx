@@ -20,7 +20,7 @@ import why.unit.time.Millisecond;
 	until successive batch means stabilize (or `maxWarmupMs` / iteration caps).
 
 	All four modes are fully wired (no stubs): adaptive paths use
-	`adaptiveWarmup` / `measureTimeBudgeted`; explicit values always win.
+	`doAdaptiveWarmup` / `doTimeBudgetedMeasure`; explicit values always win.
 **/
 class Measure {
 	static inline final DEFAULT_TARGET_MS:Float = 250;
@@ -39,53 +39,52 @@ class Measure {
 	function new() {}
 
 	public static function run<T>(fn:() -> T, ?opts:MeasureOptions):MeasureResult {
-		final name = opts?.name ?? "";
-		final iterationsOpt = opts?.iterations;
-		final warmupOpt = opts?.warmup;
+		switch opts?.warmup {
+			case null:
+				warmup = doAdaptiveWarmup(fn, opts);
+			case v if (v < 0):
+				throw "why.benchkit.Measure.run: warmup must be >= 0";
+			case v:
+				doWarmup(fn, v);
+		}
 
-		if (iterationsOpt != null && iterationsOpt < 1)
-			throw "why.benchkit.Measure.run: iterations must be >= 1";
-		if (warmupOpt != null && warmupOpt < 0)
-			throw "why.benchkit.Measure.run: warmup must be >= 0";
+		final duration = switch opts?.iterations {
+			case null:
+				final timed = doTimeBudgetedMeasure(fn, opts);
+				iterations = timed.iterations;
+				timed.duration;
+			case v if (v < 1):
+				throw "why.benchkit.Measure.run: iterations must be >= 1";
+			case v:
+				doMeasure(fn, v);
+		}
 
-		// Four-mode matrix: every arm is live (adaptiveWarmup / calibrate / fixed).
-		return switch [iterationsOpt != null, warmupOpt != null] {
-			case [true, true]: // set / set
-				runFixed(fn, name, iterationsOpt, warmupOpt);
-			case [true, false]: // set / omitted → adaptive warmup + fixed iterations
-				final warmup = adaptiveWarmup(fn, opts);
-				timedMeasure(fn, name, iterationsOpt, warmup);
-			case [false, true]: // omitted / set → fixed warmup + time-budgeted measure
-				warmupLoop(fn, warmupOpt);
-				measureTimeBudgeted(fn, name, warmupOpt, opts);
-			case [false, false]: // omitted / omitted → adaptive warmup + time-budgeted measure
-				final warmup = adaptiveWarmup(fn, opts);
-				measureTimeBudgeted(fn, name, warmup, opts);
-		};
-	}
-
-	/**
-		Fixed warmup + fixed timed iterations.
-		Preserves pre-adaptive behavior when both opts are set.
-	**/
-	static function runFixed<T>(fn:() -> T, name:String, iterations:Int, warmup:Int):MeasureResult {
-		warmupLoop(fn, warmup);
-		return timedMeasure(fn, name, iterations, warmup);
+		return {
+			name: opts?.name ?? "",
+			duration: duration,
+			iterations: iterations,
+			warmup: warmup,
+		}
 	}
 
 	/**
 		After warmup already done: calibrate iteration count to ~`targetMs`
 		and run a single contiguous timed loop.
 	**/
-	static function measureTimeBudgeted<T>(fn:() -> T, name:String, warmup:Int, opts:Null<MeasureOptions>):MeasureResult {
-		final targetMs = opts?.targetMs ?? DEFAULT_TARGET_MS;
-		final minIterations = opts?.minIterations ?? DEFAULT_MIN_ITERATIONS;
-		final maxIterations = opts?.maxIterations ?? DEFAULT_MAX_ITERATIONS;
-		final iterations = calibrateIterations(fn, targetMs, minIterations, maxIterations);
-		return timedMeasure(fn, name, iterations, warmup);
+	static function doTimeBudgetedMeasure<T>(fn:() -> T, opts:Null<MeasureOptions>):{duration:Millisecond, iterations:Int} {
+		final iterations = calibrateIterations( //
+			fn, //
+			opts?.targetMs ?? DEFAULT_TARGET_MS, //
+			opts?.minIterations ?? DEFAULT_MIN_ITERATIONS, //
+			opts?.maxIterations ?? DEFAULT_MAX_ITERATIONS //
+		);
+		return {
+			duration: doMeasure(fn, iterations),
+			iterations: iterations,
+		};
 	}
 
-	static function warmupLoop<T>(fn:() -> T, warmup:Int):Void {
+	static function doWarmup<T>(fn:() -> T, warmup:Int):Void {
 		for (_ in 0...warmup)
 			Sink.blackHole(fn());
 	}
@@ -98,7 +97,7 @@ class Measure {
 		`maxWarmupMs` and/or a total-iteration cap (`maxIterations`).
 		Returns total warmup iterations actually run.
 	**/
-	static function adaptiveWarmup<T>(fn:() -> T, opts:Null<MeasureOptions>):Int {
+	static function doAdaptiveWarmup<T>(fn:() -> T, opts:Null<MeasureOptions>):Int {
 		final tolerance = opts?.warmupTolerance ?? DEFAULT_WARMUP_TOLERANCE;
 		final patience = Std.int(Math.max(1, opts?.warmupPatience ?? DEFAULT_WARMUP_PATIENCE));
 		final maxWarmupMs = opts?.maxWarmupMs ?? DEFAULT_MAX_WARMUP_MS;
@@ -166,18 +165,11 @@ class Measure {
 		return totalIterations;
 	}
 
-	static function timedMeasure<T>(fn:() -> T, name:String, iterations:Int, warmup:Int):MeasureResult {
+	static function doMeasure<T>(fn:() -> T, iterations:Int):Millisecond {
 		final start = Timer.stamp();
 		for (_ in 0...iterations)
 			Sink.blackHole(fn());
-		final totalMs = (Timer.stamp() - start) * 1000.0;
-
-		return {
-			name: name,
-			duration: new Millisecond(totalMs),
-			iterations: iterations,
-			warmup: warmup,
-		};
+		return new Millisecond((Timer.stamp() - start) * 1000.0);
 	}
 
 	/**
