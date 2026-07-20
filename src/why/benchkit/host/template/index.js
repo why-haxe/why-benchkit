@@ -13,9 +13,11 @@
 	const selSuite = document.getElementById("sel-suite");
 	const dirtyLabel = document.getElementById("dirty-label");
 	const chkDirty = document.getElementById("chk-dirty");
-	const jsonBaseEl = document.getElementById("json-base");
+	const fileProtocolNote = document.getElementById("file-protocol-note");
 
-	if (jsonBaseEl) jsonBaseEl.textContent = JSON_BASE;
+	if (fileProtocolNote && location.protocol === "file:") {
+		fileProtocolNote.hidden = false;
+	}
 
 	/** @type {{ id: string, timestamp: number, files: string[] }[]} */
 	let commits = [];
@@ -79,25 +81,47 @@
 		};
 	}
 
-	function fillSelect(sel, values, preferred) {
-		sel.textContent = "";
+	function getSelected(container) {
+		const active = container.querySelector("button.active");
+		return active ? active.dataset.value : "";
+	}
+
+	function setActiveButton(container, value) {
+		const buttons = container.querySelectorAll("button");
+		for (const btn of buttons) {
+			const on = btn.dataset.value === value;
+			btn.classList.toggle("active", on);
+			btn.setAttribute("aria-pressed", on ? "true" : "false");
+		}
+	}
+
+	function fillButtonGroup(container, values, preferred) {
+		container.textContent = "";
 		if (!values.length) {
-			const opt = document.createElement("option");
-			opt.value = "";
-			opt.textContent = "(none)";
-			sel.appendChild(opt);
-			sel.disabled = true;
+			const btn = document.createElement("button");
+			btn.type = "button";
+			btn.textContent = "(none)";
+			btn.disabled = true;
+			btn.dataset.value = "";
+			container.appendChild(btn);
 			return;
 		}
-		sel.disabled = false;
 		for (const v of values) {
-			const opt = document.createElement("option");
-			opt.value = v;
-			opt.textContent = v;
-			sel.appendChild(opt);
+			const btn = document.createElement("button");
+			btn.type = "button";
+			btn.textContent = v;
+			btn.dataset.value = v;
+			btn.setAttribute("aria-pressed", "false");
+			btn.addEventListener("click", function () {
+				if (btn.classList.contains("active")) return;
+				setActiveButton(container, v);
+				onFilterChange();
+			});
+			container.appendChild(btn);
 		}
-		if (preferred && values.indexOf(preferred) >= 0) sel.value = preferred;
-		else sel.value = values[0];
+		const selected =
+			preferred && values.indexOf(preferred) >= 0 ? preferred : values[0];
+		setActiveButton(container, selected);
 	}
 
 	function destroyCharts() {
@@ -373,10 +397,10 @@
 
 	async function refreshSuitesAndCharts() {
 		const gen = ++loadGen;
-		const haxe = selHaxe.value;
-		const target = selTarget.value;
+		const haxe = getSelected(selHaxe);
+		const target = getSelected(selTarget);
 		if (!haxe || !target) {
-			fillSelect(selSuite, [], null);
+			fillButtonGroup(selSuite, [], null);
 			setEmpty(
 				"No haxe version / target combinations found in commit manifests."
 			);
@@ -388,8 +412,8 @@
 		const rows = await docsForSelection(haxe, target, includeDirty);
 		if (gen !== loadGen) return;
 		const suites = suiteNamesFromRows(rows);
-		const prevSuite = selSuite.value;
-		fillSelect(selSuite, suites, prevSuite);
+		const prevSuite = getSelected(selSuite);
+		fillButtonGroup(selSuite, suites, prevSuite);
 
 		const hasAnyDoc = rows.some((r) => r.doc);
 		if (!hasAnyDoc) {
@@ -415,7 +439,7 @@
 			return;
 		}
 
-		renderCharts(rows, selSuite.value);
+		renderCharts(rows, getSelected(selSuite));
 		setStatus("Ready.", false);
 	}
 
@@ -471,19 +495,16 @@
 				commits.map((c) => c.files).concat(dirty ? [dirty.files] : [])
 			);
 			controlsEl.hidden = false;
-			fillSelect(selHaxe, pairs.haxes, null);
-			fillSelect(selTarget, pairs.targets, null);
+			fillButtonGroup(selHaxe, pairs.haxes, null);
+			fillButtonGroup(selTarget, pairs.targets, null);
 
 			if (dirty) {
 				dirtyLabel.hidden = false;
-				chkDirty.checked = false;
+				chkDirty.checked = true;
 			} else {
 				dirtyLabel.hidden = true;
 			}
 
-			selHaxe.addEventListener("change", onFilterChange);
-			selTarget.addEventListener("change", onFilterChange);
-			selSuite.addEventListener("change", onFilterChange);
 			if (chkDirty) chkDirty.addEventListener("change", onFilterChange);
 
 			if (!commits.length && !dirty) {

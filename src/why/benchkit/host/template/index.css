@@ -21,7 +21,7 @@
 	}
 }
 body {
-	margin: 1.5rem;
+	margin: 1.5rem auto;
 	line-height: 1.45;
 	max-width: 64rem;
 	color: var(--fg);
@@ -51,37 +51,71 @@ body {
 }
 .controls {
 	display: flex;
-	flex-wrap: wrap;
-	gap: 0.75rem 1.25rem;
-	align-items: flex-end;
+	flex-direction: column;
+	gap: 0.85rem;
 	margin: 1.25rem 0;
 	padding: 0.75rem 0;
 	border-top: 1px solid var(--border);
 	border-bottom: 1px solid var(--border);
 }
-.controls label {
+.control-group {
 	display: flex;
 	flex-direction: column;
-	gap: 0.25rem;
+	gap: 0.35rem;
+}
+.control-label {
+	color: var(--muted);
 	font-size: 0.85rem;
 }
+.btn-group {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 0;
+}
+.btn-group button {
+	font: inherit;
+	padding: 0.35rem 0.75rem;
+	border: 1px solid var(--border);
+	background: transparent;
+	color: inherit;
+	cursor: pointer;
+	margin-left: -1px;
+}
+.btn-group button:first-child {
+	margin-left: 0;
+	border-radius: 4px 0 0 4px;
+}
+.btn-group button:last-child {
+	border-radius: 0 4px 4px 0;
+}
+.btn-group button:only-child {
+	border-radius: 4px;
+}
+.btn-group button:hover:not(:disabled) {
+	border-color: var(--accent);
+	z-index: 1;
+	position: relative;
+}
+.btn-group button.active {
+	background: var(--accent);
+	border-color: var(--accent);
+	color: #fff;
+	z-index: 1;
+	position: relative;
+}
+.btn-group button:disabled {
+	opacity: 0.5;
+	cursor: not-allowed;
+}
 .controls label.checkbox {
+	display: flex;
 	flex-direction: row;
 	align-items: center;
 	gap: 0.4rem;
-	padding-bottom: 0.35rem;
+	font-size: 0.85rem;
 }
-.controls span {
+.controls label.checkbox span {
 	color: var(--muted);
-}
-.controls select {
-	font: inherit;
-	min-width: 10rem;
-	padding: 0.35rem 0.5rem;
-	border: 1px solid var(--border);
-	border-radius: 4px;
-	background: transparent;
-	color: inherit;
 }
 .empty {
 	color: var(--muted);

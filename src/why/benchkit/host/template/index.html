@@ -9,34 +9,45 @@
 	<body>
 		<header class="page-header">
 			<h1>why-benchkit</h1>
-			<p class="meta">
-				Historical benchmark charts — data loaded via <code>fetch</code> (no
-				embedding).
-			</p>
-			<p class="note">
+			<p class="meta">Historical benchmark charts</p>
+			<p id="file-protocol-note" class="note" hidden>
 				Serve this page over HTTP (e.g. <code>npx serve</code> or
 				<code>python -m http.server</code>). Opening via
 				<code>file://</code> will fail because browsers block local
 				<code>fetch</code>.
 			</p>
-			<p class="meta">JSON base: <code id="json-base"></code></p>
 		</header>
 
 		<div id="status" class="status">Loading…</div>
 
 		<section id="controls" class="controls" hidden>
-			<label>
-				<span>Haxe</span>
-				<select id="sel-haxe"></select>
-			</label>
-			<label>
-				<span>Target</span>
-				<select id="sel-target"></select>
-			</label>
-			<label>
-				<span>Suite</span>
-				<select id="sel-suite"></select>
-			</label>
+			<div class="control-group">
+				<span class="control-label">Haxe</span>
+				<div
+					id="sel-haxe"
+					class="btn-group"
+					role="group"
+					aria-label="Haxe"
+				></div>
+			</div>
+			<div class="control-group">
+				<span class="control-label">Target</span>
+				<div
+					id="sel-target"
+					class="btn-group"
+					role="group"
+					aria-label="Target"
+				></div>
+			</div>
+			<div class="control-group">
+				<span class="control-label">Suite</span>
+				<div
+					id="sel-suite"
+					class="btn-group"
+					role="group"
+					aria-label="Suite"
+				></div>
+			</div>
 			<label id="dirty-label" class="checkbox" hidden>
 				<input type="checkbox" id="chk-dirty" />
 				<span>Show dirty overlay</span>
