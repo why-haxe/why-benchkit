@@ -1,5 +1,6 @@
 package why.benchkit;
 
+import why.benchkit.host.HostCompareCommand;
 import why.benchkit.host.HostHtmlCommand;
 import why.benchkit.host.HostManifestCommand;
 import why.benchkit.host.HostRunCommand;
@@ -18,6 +19,12 @@ class Run {
 	**/
 	@:command
 	public final run:HostRunCommand;
+
+	/**
+		Compare suite results at two git SHAs (OS-temp json-dir + worktrees)
+	**/
+	@:command
+	public final compare:HostCompareCommand;
 
 	/**
 		Rebuild the root clean-commit JSON catalog under `--json-dir`
@@ -40,6 +47,7 @@ class Run {
 	public function new(libraryRoot:String) {
 		this.libraryRoot = libraryRoot;
 		this.run = new HostRunCommand(libraryRoot);
+		this.compare = new HostCompareCommand(libraryRoot);
 		this.manifest = new HostManifestCommand();
 		this.html = new HostHtmlCommand();
 		this.sync = new HostSyncCommand();

@@ -29,6 +29,27 @@ class HostCompareSmoke {
 				assertShaFolder(artifacts.jsonDir, artifacts.headSha);
 				if (artifacts.baseSha != prepared.baseSha || artifacts.headSha != prepared.headSha)
 					throw 'HostCompareSmoke: artifact SHAs mismatch';
+
+				final baseDocs = HostCompare.loadDocs(artifacts.jsonDir, artifacts.baseSha);
+				final headDocs = HostCompare.loadDocs(artifacts.jsonDir, artifacts.headSha);
+				if (baseDocs.length == 0 || headDocs.length == 0)
+					throw 'HostCompareSmoke: expected loaded docs on both sides';
+				for (doc in baseDocs.concat(headDocs)) {
+					if (doc.target != 'interp')
+						throw 'HostCompareSmoke: expected CLI target interp, got ${doc.target}';
+				}
+				final report = why.benchkit.Compare.diff(baseDocs, headDocs, {
+					base: artifacts.baseSha,
+					head: artifacts.headSha,
+					threshold: 0.10,
+				});
+				if (!why.benchkit.Compare.hasPairedMeasures(report))
+					throw 'HostCompareSmoke: expected paired measures after loadDocs';
+				final code = HostCompare.exitCode(report, false);
+				if (code != 0 && why.benchkit.Compare.degraded(report).length == 0)
+					throw 'HostCompareSmoke: unexpected exit $code without degradations';
+				Sys.println(HostCompare.formatReport(report));
+
 				Sys.println('HostCompareSmoke: json under ${artifacts.jsonDir}');
 				Sys.println('  base ${artifacts.baseSha}');
 				Sys.println('  head ${artifacts.headSha}');

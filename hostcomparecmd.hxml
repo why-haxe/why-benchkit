@@ -1,0 +1,11 @@
+# HostCompareCommand load / exit / format smoke (synthetic JSON).
+# Usage: haxe hostcomparecmd.hxml
+-cp src
+-cp tests
+-lib travix
+-lib why-unit
+-lib tink_cli
+-lib hx3compat
+-D no-deprecation-warnings
+-main HostCompareCommandSmoke
+--interp

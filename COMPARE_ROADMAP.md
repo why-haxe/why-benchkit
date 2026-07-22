@@ -538,12 +538,12 @@ Shared log template (copy under each chunk):
 
 #### Checklist
 
-- [ ] Flags: `--base`, `--head`, `--targets`, `--samples`, `--threshold`, `--fail-on-missing`
-- [ ] Call 4b orchestration for both SHAs
-- [ ] Load JSON for all targets / haxe versions under both SHA folders
-- [ ] Call pure `Compare` → print human-readable table (suite, measure, base ops, head ops, delta %, verdict)
-- [ ] Print missing-side counts; exit `1` on any `degraded`, on zero paired measures, on `_dirty`/orchestration failure, and on `--fail-on-missing` when set
-- [ ] `why-benchkit compare --help` documents flags
+- [x] Flags: `--base`, `--head`, `--targets`, `--samples`, `--threshold`, `--fail-on-missing`
+- [x] Call 4b orchestration for both SHAs
+- [x] Load JSON for all targets / haxe versions under both SHA folders
+- [x] Call pure `Compare` → print human-readable table (suite, measure, base ops, head ops, delta %, verdict)
+- [x] Print missing-side counts; exit `1` on any `degraded`, on zero paired measures, on `_dirty`/orchestration failure, and on `--fail-on-missing` when set
+- [x] `why-benchkit compare --help` documents flags
 
 #### Acceptance criteria
 
@@ -554,10 +554,10 @@ Shared log template (copy under each chunk):
 
 | Field | Value |
 | --- | --- |
-| Date | |
-| Agent / model | |
-| Notes | |
-| Follow-ups | |
+| Date | 2026-07-22 |
+| Agent / model | Composer (Cursor agent) |
+| Notes | `HostCompareCommand` wired in `Run` with `--base`/`--head`/`--targets`/`--samples` (5)/`--threshold` (0.10)/`--fail-on-missing`. Uses `HostCompare.withRuns` + absolute `libraryRoot`. `loadDocs` rewrites `BenchmarkResult.target` from JSON filename (CLI target), not body `eval`. Pure `exitCode` / `formatReport`; exit 1 on degraded, zero pairs, orchestration failure, or fail-on-missing. Verified: `haxe hostcomparecmd.hxml`, extended `hostcompare.hxml` (load+diff+table on fixture SHAs), `compare help` via `--run`. |
+| Follow-ups | Chunk 5: README samples/compare + TODOs. Chunk 6: `--post-pr-comment` (warn-only). No full CLI E2E via `haxelib run` in this chunk — orchestration covered by HostCompareSmoke. |
 
 ---
 
@@ -662,3 +662,4 @@ Shared log template (copy under each chunk):
 | 2026-07-22 | Chunk 3 done: pure `why.benchkit.Compare` align/diff/verdicts + `CompareSmoke`; default threshold 0.10; `hasPairedMeasures` for zero-pair fail |
 | 2026-07-22 | Chunk 4a done: `HostRun.run` returns `HostRunStatus`; `HostRunCommand` maps to `Sys.exit`; travix hard-exit documented; `HostRunSmoke` + `hostrun.hxml` |
 | 2026-07-22 | Chunk 4b done: `HostCompare` run-at-SHA (OS-temp json-dir, worktree, `lix download`, shared `HostRun`, clean-SHA assert); `HostCompareSmoke` + `hostcompare.hxml` |
+| 2026-07-22 | Chunk 4c done: `HostCompareCommand` + `Run.compare`; loadDocs rewrites target from filename; table + exit policy; `HostCompareCommandSmoke` + `hostcomparecmd.hxml` |

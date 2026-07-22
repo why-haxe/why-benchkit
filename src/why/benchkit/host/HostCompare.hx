@@ -1,16 +1,26 @@
 package why.benchkit.host;
 
+import haxe.Json;
 import haxe.io.Path;
 import sys.FileSystem;
+import sys.io.File;
 import sys.io.Process;
+import why.benchkit.BenchmarkResult;
+import why.benchkit.Compare;
+import why.benchkit.CompareEntry;
+import why.benchkit.CompareReport;
+import why.benchkit.CompareVerdict;
+import why.benchkit.MeasureResult;
+import why.benchkit.SuiteResult;
 import why.benchkit.host.HostRunStatus;
+import why.unit.time.Millisecond;
 
 /**
 	Compare orchestration helpers: resolve SHAs, OS-temp `json-dir`, per-SHA
-	worktree + `lix download` + shared `HostRun`, then cleanup.
+	worktree + `lix download` + shared `HostRun`, load JSON, then cleanup.
 
-	No CLI yet (Chunk 4c). Callers own process exit; prefer `withRuns` so the
-	temp `json-dir` is removed after results are consumed.
+	Callers own process exit; prefer `withRuns` so the temp `json-dir` is
+	removed after results are consumed.
 **/
 class HostCompare {
 	function new() {}
@@ -143,6 +153,223 @@ class HostCompare {
 			removeJsonDir(jsonDir);
 			throw e;
 		}
+	}
+
+	/**
+		Load all result JSON under `<jsonDir>/<fullSha>/…`.
+
+		Sets each `BenchmarkResult.target` from the filename stem (CLI/host
+		target, e.g. `interp`), **not** the raw JSON body `target` (often
+		`eval` for `--interp`).
+	**/
+	public static function loadDocs(jsonDir:String, fullSha:String):Array<BenchmarkResult> {
+		final shaDir = Path.normalize(Path.join([jsonDir, fullSha]));
+		if (!FileSystem.exists(shaDir) || !FileSystem.isDirectory(shaDir))
+			throw 'why-benchkit: missing JSON folder for $fullSha: $shaDir';
+
+		final docs:Array<BenchmarkResult> = [];
+		function walk(absDir:String):Void {
+			for (name in FileSystem.readDirectory(absDir)) {
+				final child = Path.join([absDir, name]);
+				if (FileSystem.isDirectory(child)) {
+					walk(child);
+					continue;
+				}
+				if (name == 'manifest.json' || !StringTools.endsWith(name, '.json'))
+					continue;
+				final cliTarget = Path.withoutExtension(name);
+				docs.push(parseDoc(child, cliTarget));
+			}
+		}
+		walk(shaDir);
+		docs.sort((a, b) -> {
+			final byVer = Reflect.compare(a.haxeVersion, b.haxeVersion);
+			return byVer != 0 ? byVer : Reflect.compare(a.target, b.target);
+		});
+		return docs;
+	}
+
+	/**
+		Compare CLI exit policy (pure):
+		- `1` when zero paired measures
+		- `1` when any major degradation
+		- `1` when `failOnMissing` and any missing-side entry
+		- otherwise `0`
+	**/
+	public static function exitCode(report:CompareReport, failOnMissing:Bool):Int {
+		if (!Compare.hasPairedMeasures(report))
+			return 1;
+		if (Compare.degraded(report).length > 0)
+			return 1;
+		if (failOnMissing && Compare.missing(report).length > 0)
+			return 1;
+		return 0;
+	}
+
+	/** Human-readable compare table + summary counts (pure string). */
+	public static function formatReport(report:CompareReport):String {
+		final lines:Array<String> = [];
+		lines.push('compare ${shortSha(report.base)}…${shortSha(report.head)} (threshold ${formatPct(report.threshold)})');
+		lines.push('');
+		lines.push(pad('SUITE', 18) + pad('MEASURE', 18) + pad('TARGET', 10) + pad('BASE', 12) + pad('HEAD', 12)
+			+ pad('DELTA', 10) + 'VERDICT');
+		lines.push(StringTools.lpad('', '-', 90));
+
+		for (e in report.entries)
+			lines.push(formatEntryRow(e));
+
+		lines.push('');
+		lines.push('paired=${Compare.pairedCount(report)}'
+			+ ' improved=${Compare.improved(report).length}'
+			+ ' degraded=${Compare.degraded(report).length}'
+			+ ' unchanged=${Compare.unchanged(report).length}'
+			+ ' missing=${Compare.missing(report).length}'
+			+ ' (missing_base=${Compare.entriesWithVerdict(report, CompareVerdict.MissingBase).length}'
+			+ ' missing_head=${Compare.entriesWithVerdict(report, CompareVerdict.MissingHead).length})');
+		return lines.join('\n');
+	}
+
+	static function parseDoc(path:String, cliTarget:String):BenchmarkResult {
+		final raw:Dynamic = try {
+			Json.parse(File.getContent(path));
+		} catch (e:Dynamic) {
+			throw 'why-benchkit: failed to parse $path ($e)';
+		};
+
+		final haxeVersion = requiredString(raw, 'haxeVersion', path);
+		final timestamp = requiredFloat(raw, 'timestamp', path);
+		final commitHash = requiredString(raw, 'commitHash', path);
+		final suitesRaw:Dynamic = Reflect.field(raw, 'results');
+		if (suitesRaw == null || !Std.isOfType(suitesRaw, Array))
+			throw 'why-benchkit: missing results array in $path';
+
+		final suites:Array<SuiteResult> = [];
+		for (suiteDyn in (suitesRaw : Array<Dynamic>)) {
+			final suiteName = requiredString(suiteDyn, 'name', path);
+			final measuresRaw:Dynamic = Reflect.field(suiteDyn, 'results');
+			if (measuresRaw == null || !Std.isOfType(measuresRaw, Array))
+				throw 'why-benchkit: missing suite results in $path';
+			final measures:Array<MeasureResult> = [];
+			for (mDyn in (measuresRaw : Array<Dynamic>)) {
+				final mName = requiredString(mDyn, 'name', path);
+				final durationMs = requiredFloat(mDyn, 'duration', path);
+				final iterations = Std.int(requiredFloat(mDyn, 'iterations', path));
+				final warmup = Std.int(requiredFloat(mDyn, 'warmup', path));
+				final samplesField:Dynamic = Reflect.field(mDyn, 'samples');
+				final measure:MeasureResult = if (samplesField != null && Std.isOfType(samplesField, Array)) {
+					final samples:Array<Millisecond> = [
+						for (s in (samplesField : Array<Dynamic>))
+							new Millisecond(Std.parseFloat(Std.string(s)))
+					];
+					{
+						name: mName,
+						duration: new Millisecond(durationMs),
+						iterations: iterations,
+						warmup: warmup,
+						samples: samples,
+					};
+				} else {
+					{
+						name: mName,
+						duration: new Millisecond(durationMs),
+						iterations: iterations,
+						warmup: warmup,
+					};
+				};
+				measures.push(measure);
+			}
+			suites.push({name: suiteName, results: measures});
+		}
+
+		// Identity for Compare uses CLI/filename target, not body `eval`.
+		return {
+			haxeVersion: haxeVersion,
+			target: cliTarget,
+			timestamp: timestamp,
+			results: suites,
+			commitHash: commitHash,
+		};
+	}
+
+	static function requiredString(obj:Dynamic, field:String, path:String):String {
+		final v:Dynamic = Reflect.field(obj, field);
+		if (v == null)
+			throw 'why-benchkit: missing $field in $path';
+		final s = StringTools.trim(Std.string(v));
+		if (s.length == 0)
+			throw 'why-benchkit: empty $field in $path';
+		return s;
+	}
+
+	static function requiredFloat(obj:Dynamic, field:String, path:String):Float {
+		final v:Dynamic = Reflect.field(obj, field);
+		if (v == null)
+			throw 'why-benchkit: missing $field in $path';
+		if (Std.isOfType(v, Float) || Std.isOfType(v, Int))
+			return (v : Float);
+		final parsed = Std.parseFloat(Std.string(v));
+		if (!Math.isFinite(parsed))
+			throw 'why-benchkit: bad $field in $path';
+		return parsed;
+	}
+
+	static function formatEntryRow(e:CompareEntry):String {
+		return pad(e.suite, 18)
+			+ pad(e.measure, 18)
+			+ pad(e.target, 10)
+			+ pad(formatOps(e.baseOps), 12)
+			+ pad(formatOps(e.headOps), 12)
+			+ pad(formatDelta(e.delta), 10)
+			+ (e.verdict : String);
+	}
+
+	static function formatOps(ops:Null<Float>):String {
+		if (ops == null)
+			return '—';
+		if (!Math.isFinite(ops))
+			return 'inf';
+		if (ops >= 1000)
+			return Std.string(Math.round(ops));
+		return fixed(ops, 1);
+	}
+
+	static function formatDelta(delta:Null<Float>):String {
+		if (delta == null)
+			return '—';
+		if (!Math.isFinite(delta))
+			return delta > 0 ? '+inf' : '-inf';
+		final pct = delta * 100;
+		final sign = pct > 0 ? '+' : '';
+		return sign + fixed(pct, 1) + '%';
+	}
+
+	static function formatPct(threshold:Float):String {
+		return fixed(threshold * 100, 0) + '%';
+	}
+
+	static function shortSha(sha:String):String {
+		return sha.length > 7 ? sha.substr(0, 7) : sha;
+	}
+
+	static function fixed(v:Float, digits:Int):String {
+		final factor = Math.pow(10, digits);
+		final rounded = Math.round(v * factor) / factor;
+		final s = Std.string(rounded);
+		final dot = s.indexOf('.');
+		if (digits <= 0)
+			return dot < 0 ? s : s.substr(0, dot);
+		if (dot < 0)
+			return s + '.' + StringTools.lpad('', '0', digits);
+		final frac = s.substr(dot + 1);
+		if (frac.length >= digits)
+			return s.substr(0, dot + 1 + digits);
+		return s + StringTools.lpad('', '0', digits - frac.length);
+	}
+
+	static function pad(s:String, width:Int):String {
+		if (s.length >= width)
+			return s.substr(0, width - 1) + ' ';
+		return s + StringTools.lpad('', ' ', width - s.length);
 	}
 
 	/**
