@@ -330,7 +330,7 @@ Shared log template (copy under each chunk):
 | Date | 2026-07-22 |
 | Agent / model | Composer (Auto) |
 | Notes | Spec freeze complete. Locked decisions treated as frozen — see **Locked decisions (Chunk 0)** table above (verbatim): sample count default **5** on `Measure.run` and host `--samples`; `targetMs` = **150**; options field `MeasureOptions.sampleCount` (result field `samples`); host→guest via top-level `sampleCount` on `BenchkitConfig` in `WHY_BENCHKIT_CONFIG`; precedence explicit measure opts **>** host config **>** 5; compare `json-dir` = **OS temp only** (outside repo/worktrees); cleanup via `try/finally` with OS temp as crash safety net; JSON folder must be `<json-dir>/<full-sha>/…` — **fail** on `_dirty` / SHA mismatch; worktree cwd = clean detached checkout; after `git worktree add` run **`lix download`** (README TODO for custom install later); v1 noise = mean ± threshold only (README TODO for variance/median); pure `why.benchkit.Compare` (not under `host/`); HostRun **returns status**, CLI owns `Sys.exit`; zero paired measures → non-zero exit; `--post-pr-comment` failure = **warn only**; Chunk 4 split **4a** / **4b** / **4c**. No HostReporter / IPC. Flags: `--samples` (5), compare `--base`/`--head`/`--targets`/`--threshold` (0.10). Metric: mean ops/sec; major = \|delta\| ≥ threshold; fail on major degradation. |
-| Follow-ups | Next: Chunk 2 — Host `--samples` on `run`. Chunk 1 completed: `DEFAULT_TARGET_MS` / `MeasureOptions` now **150**. README still documents 500 until Chunk 5. |
+| Follow-ups | Next: Chunk 2 — Host `--samples` on `run`. Chunk 1 completed: `DEFAULT_TARGET_MS` / `MeasureOptions` now **150**. README `targetMs` / samples docs landed in Chunk 5. |
 
 ---
 
@@ -373,8 +373,8 @@ Shared log template (copy under each chunk):
 | --- | --- |
 | Date | 2026-07-22 |
 | Agent / model | Composer (Auto) |
-| Notes | Sampled `Measure.run`: warmup once → resolve iterations once (fixed or `calibrateIterations`) → N timed loops; `samples` filled; `duration` = arithmetic mean via `Millisecond` ops. Defaults: `sampleCount` **5**, `targetMs` **150** (`DEFAULT_TARGET_MS` was 250; `MeasureOptions` docs were 500). Rejects `sampleCount < 1`. Calibration probes documented as outside `samples`; no first-sample discard. Smoke extended for default/explicit/budgeted N and mean↔duration; existing matrix tests use `sampleCount: 1` for speed. Host `--samples` / Runner injection left for Chunk 2. README still says targetMs 500 — Chunk 5. |
-| Follow-ups | Chunk 2: host `--samples` + `BenchkitConfig.sampleCount` injection. Chunk 5: README `targetMs` **150**. |
+| Notes | Sampled `Measure.run`: warmup once → resolve iterations once (fixed or `calibrateIterations`) → N timed loops; `samples` filled; `duration` = arithmetic mean via `Millisecond` ops. Defaults: `sampleCount` **5**, `targetMs` **150** (`DEFAULT_TARGET_MS` was 250; `MeasureOptions` docs were 500). Rejects `sampleCount < 1`. Calibration probes documented as outside `samples`; no first-sample discard. Smoke extended for default/explicit/budgeted N and mean↔duration; existing matrix tests use `sampleCount: 1` for speed. Host `--samples` / Runner injection left for Chunk 2. README `targetMs` / samples docs landed in Chunk 5. |
+| Follow-ups | Chunk 2: host `--samples` + `BenchkitConfig.sampleCount` injection. |
 ---
 
 ### Chunk 2 — Host `--samples` on `run`
@@ -557,7 +557,7 @@ Shared log template (copy under each chunk):
 | Date | 2026-07-22 |
 | Agent / model | Composer (Cursor agent) |
 | Notes | `HostCompareCommand` wired in `Run` with `--base`/`--head`/`--targets`/`--samples` (5)/`--threshold` (0.10)/`--fail-on-missing`. Uses `HostCompare.withRuns` + absolute `libraryRoot`. `loadDocs` rewrites `BenchmarkResult.target` from JSON filename (CLI target), not body `eval`. Pure `exitCode` / `formatReport`; exit 1 on degraded, zero pairs, orchestration failure, or fail-on-missing. Verified: `haxe hostcomparecmd.hxml`, extended `hostcompare.hxml` (load+diff+table on fixture SHAs), `compare help` via `--run`. |
-| Follow-ups | Chunk 5: README samples/compare + TODOs. Chunk 6: `--post-pr-comment` (warn-only). No full CLI E2E via `haxelib run` in this chunk — orchestration covered by HostCompareSmoke. |
+| Follow-ups | Chunk 6: `--post-pr-comment` (warn-only). No full CLI E2E via `haxelib run` in this chunk — orchestration covered by HostCompareSmoke. README/docs landed in Chunk 5. |
 
 ---
 
@@ -575,14 +575,14 @@ Shared log template (copy under each chunk):
 
 #### Checklist
 
-- [ ] README: `MeasureResult.samples` / `--samples` default 5
-- [ ] README: default `targetMs` **150** (adaptive / time-budgeted)
-- [ ] README: `compare --base --head --targets` section with exit-code behavior, OS-temp json-dir, worktree + `lix download`
-- [ ] README **TODO**: allow customizing the per-worktree install command (today hard-coded `lix download`)
-- [ ] README **TODO**: noise model / statistical comparison (v1 is mean ± threshold only; samples stored for later)
-- [ ] Note non-goal: no HostReporter
-- [ ] Smoke steps for local verify (interp or node)
-- [ ] Mention cleanup / worktree / OS-temp behavior briefly
+- [x] README: `MeasureResult.samples` / `--samples` default 5
+- [x] README: default `targetMs` **150** (adaptive / time-budgeted)
+- [x] README: `compare --base --head --targets` section with exit-code behavior, OS-temp json-dir, worktree + `lix download`
+- [x] README **TODO**: allow customizing the per-worktree install command (today hard-coded `lix download`)
+- [x] README **TODO**: noise model / statistical comparison (v1 is mean ± threshold only; samples stored for later)
+- [x] Note non-goal: no HostReporter
+- [x] Smoke steps for local verify (interp or node)
+- [x] Mention cleanup / worktree / OS-temp behavior briefly
 
 #### Acceptance criteria
 
@@ -593,10 +593,10 @@ Shared log template (copy under each chunk):
 
 | Field | Value |
 | --- | --- |
-| Date | |
-| Agent / model | |
-| Notes | |
-| Follow-ups | |
+| Date | 2026-07-22 |
+| Agent / model | Composer (Cursor agent) |
+| Notes | README: samples N=5 + `targetMs` **150**; host `run --samples`; full `compare` section (flags, OS-temp json-dir, worktree + `lix download`, cleanup, exit codes); both README TODOs (install cmd, noise model); no HostReporter called out in intro + reporter section; local verify smokes (`smoke` / `compare` / `hostcomparecmd` / `hostcompare` / `check-run`) + fixture compare note; JSON example includes `samples`. Pointed HostCompare `lixDownload` comment at README TODO. |
+| Follow-ups | Chunk 6: `--post-pr-comment` (warn-only). No code behavior changes in this chunk. |
 
 ---
 
@@ -663,3 +663,4 @@ Shared log template (copy under each chunk):
 | 2026-07-22 | Chunk 4a done: `HostRun.run` returns `HostRunStatus`; `HostRunCommand` maps to `Sys.exit`; travix hard-exit documented; `HostRunSmoke` + `hostrun.hxml` |
 | 2026-07-22 | Chunk 4b done: `HostCompare` run-at-SHA (OS-temp json-dir, worktree, `lix download`, shared `HostRun`, clean-SHA assert); `HostCompareSmoke` + `hostcompare.hxml` |
 | 2026-07-22 | Chunk 4c done: `HostCompareCommand` + `Run.compare`; loadDocs rewrites target from filename; table + exit policy; `HostCompareCommandSmoke` + `hostcomparecmd.hxml` |
+| 2026-07-22 | Chunk 5 done: README samples / `targetMs` 150 / compare usage / exit codes / worktree+`lix download` / TODOs / local verify smokes |

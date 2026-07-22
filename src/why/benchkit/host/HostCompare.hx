@@ -392,7 +392,7 @@ class HostCompare {
 	/**
 		Install worktree deps via `lix download`. Fail with an actionable message
 		when `lix` is missing or exits non-zero.
-		TODO(Chunk 5 README): allow customizing this install command.
+		See README TODO: allow customizing the per-worktree install command.
 	**/
 	static function lixDownload(cwd:String):Void {
 		Sys.println('why-benchkit: compare: lix download in $cwd');
