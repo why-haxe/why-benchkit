@@ -7,3 +7,4 @@
 why.benchkit.Runner
 why.benchkit.Config
 why.benchkit.Measure
+why.benchkit.Compare

@@ -423,18 +423,18 @@ Shared log template (copy under each chunk):
 
 **Files (expected):**
 
-- New `src/why/benchkit/Compare.hx` (package `why.benchkit`; + small types file if needed)
-- Tests e.g. `tests/CompareSmoke.hx` + hxml wiring if required
+- New `src/why/benchkit/Compare.hx` (+ `CompareVerdict` / `CompareEntry` / `CompareReport` / `CompareOptions`)
+- Tests: `tests/CompareSmoke.hx` + `compare.hxml`; `check.hxml` lists `why.benchkit.Compare`
 
 #### Checklist
 
-- [ ] Implement keying by `(haxeVersion, target, suite, measure)`
-- [ ] Compute ops/sec from `iterations` + mean `duration`
-- [ ] Apply threshold → verdicts (`improved` / `degraded` / `unchanged` / missing sides)
-- [ ] Pure functions only (no git, no travix, no Sys I/O in core)
-- [ ] Unit/smoke tests for improved, degraded, unchanged, missing base, missing head
-- [ ] Helper to build `CompareReport` summary lists (e.g. all degraded entries)
-- [ ] Helper or documented check for “zero paired measures”
+- [x] Implement keying by `(haxeVersion, target, suite, measure)`
+- [x] Compute ops/sec from `iterations` + mean `duration`
+- [x] Apply threshold → verdicts (`improved` / `degraded` / `unchanged` / missing sides)
+- [x] Pure functions only (no git, no travix, no Sys I/O in core)
+- [x] Unit/smoke tests for improved, degraded, unchanged, missing base, missing head
+- [x] Helper to build `CompareReport` summary lists (e.g. all degraded entries)
+- [x] Helper or documented check for “zero paired measures”
 
 #### Acceptance criteria
 
@@ -444,10 +444,10 @@ Shared log template (copy under each chunk):
 
 | Field | Value |
 | --- | --- |
-| Date | |
-| Agent / model | |
-| Notes | |
-| Follow-ups | |
+| Date | 2026-07-22 |
+| Agent / model | Composer (Cursor agent) |
+| Notes | Pure `why.benchkit.Compare`: `diff(baseDocs, headDocs, options)` keys by `(haxeVersion, target, suite, measure)`, ops/sec = `iterations / (durationMs/1000)`, relative delta vs threshold (default **0.10**). Verdicts: improved / degraded / unchanged / missing_base / missing_head. Types split into `CompareVerdict` / `CompareEntry` / `CompareReport` / `CompareOptions`. Summary helpers: `degraded` / `improved` / `unchanged` / `missing` / `entriesWithVerdict`; zero-pair check: `pairedCount` / `hasPairedMeasures` (documented for host exit-1). Callers should set `BenchmarkResult.target` to CLI/host target for identity. Verified via `haxe compare.hxml` (`CompareSmoke`), `haxe check.hxml`. |
+| Follow-ups | Chunk 4c must load JSON and rewrite/set `target` to the filename/CLI target before calling `diff`. Chunk 4a/4b still needed for orchestration. |
 
 ---
 
@@ -657,3 +657,4 @@ Shared log template (copy under each chunk):
 | 2026-07-22 | Locked decisions from review: OS-temp json-dir; `lix download` per worktree; README TODOs (install customization, noise model); default `targetMs` 150 with N=5; freeze config/`sampleCount`/precedence; fail on `_dirty` / zero pairs; pure `Compare` outside host; split Chunk 4 → 4a/4b/4c; PR comment warn-only |
 | 2026-07-22 | Chunk 0 review: clarify Goals #3 — compare creates OS-temp `json-dir`; not a user `--json-dir` flag |
 | 2026-07-22 | Chunk 2 done: host `--samples` → `BenchkitConfig.sampleCount` via `WHY_BENCHKIT_CONFIG`; Runner applies with explicit-opts precedence |
+| 2026-07-22 | Chunk 3 done: pure `why.benchkit.Compare` align/diff/verdicts + `CompareSmoke`; default threshold 0.10; `hasPairedMeasures` for zero-pair fail |

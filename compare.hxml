@@ -1,0 +1,8 @@
+# Pure Compare.diff smoke on interp (no travix / filesystem).
+# Usage: haxe compare.hxml
+-cp src
+-cp tests
+-lib travix
+-lib why-unit
+-main CompareSmoke
+--interp
