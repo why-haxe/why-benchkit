@@ -22,7 +22,9 @@ class Runner {
 		}
 
 		return macro {
-			final __reporters = why.benchkit.Runner.loadReporters();
+			final __config = why.benchkit.Runner.loadConfig();
+			final __reporters = why.benchkit.Runner.reportersFromConfig(__config);
+			final __hostSampleCount = __config.sampleCount;
 			final __suiteResults:Array<why.benchkit.SuiteResult> = [];
 			$b{suiteBlocks};
 			why.benchkit.Runner.finish(__suiteResults, __reporters);
@@ -81,7 +83,7 @@ class Runner {
 			}
 			: macro () -> $call;
 
-		return macro $i{resultsIdent}.push(why.benchkit.Measure.run($fn, $opts));
+		return macro $i{resultsIdent}.push(why.benchkit.Measure.run($fn, why.benchkit.Runner.applyHostSampleCount($opts, __hostSampleCount)));
 	}
 
 	static function isVoidReturn(field:ClassField):Bool {

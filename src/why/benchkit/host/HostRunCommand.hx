@@ -23,6 +23,12 @@ class HostRunCommand {
 	@:optional
 	public var jsonDir:String;
 
+	/**
+		Independent timed loops per measure after warmup (default 5). Must be >= 1.
+	**/
+	@:alias(false)
+	public var samples:Int = 5;
+
 	public function new(libraryRoot:String) {
 		this.libraryRoot = libraryRoot;
 	}
@@ -40,6 +46,11 @@ class HostRunCommand {
 				Sys.exit(1);
 				return;
 			}
+			if (samples < 1) {
+				Sys.println('why-benchkit: --samples must be >= 1');
+				Sys.exit(1);
+				return;
+			}
 			final jsonOutputDir = switch jsonDir {
 				case null | '':
 					null;
@@ -50,7 +61,7 @@ class HostRunCommand {
 					else
 						haxe.io.Path.normalize(absolutePath(trimmed));
 			};
-			HostRun.run(targets, libraryRoot, jsonOutputDir);
+			HostRun.run(targets, libraryRoot, jsonOutputDir, samples);
 		} catch (e:Dynamic) {
 			Sys.println(Std.string(e));
 			Sys.exit(1);

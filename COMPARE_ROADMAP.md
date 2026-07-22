@@ -393,11 +393,11 @@ Shared log template (copy under each chunk):
 
 #### Checklist
 
-- [ ] Add `--samples` to `HostRunCommand` (default 5; validate ≥ 1)
-- [ ] Thread value into `HostRun.run`
-- [ ] Inject top-level `sampleCount` on `BenchkitConfig` via `WHY_BENCHKIT_CONFIG`; suite applies to all measures
-- [ ] Precedence: explicit measure `sampleCount` **>** host config **>** 5 (document in code comment)
-- [ ] Smoke: `run --targets interp --samples 3` produces JSON (when `--json-dir` set) with `samples.length == 3`
+- [x] Add `--samples` to `HostRunCommand` (default 5; validate ≥ 1)
+- [x] Thread value into `HostRun.run`
+- [x] Inject top-level `sampleCount` on `BenchkitConfig` via `WHY_BENCHKIT_CONFIG`; suite applies to all measures
+- [x] Precedence: explicit measure `sampleCount` **>** host config **>** 5 (document in code comment)
+- [x] Smoke: `run --targets interp --samples 3` produces JSON (when `--json-dir` set) with `samples.length == 3`
 
 #### Acceptance criteria
 
@@ -408,10 +408,10 @@ Shared log template (copy under each chunk):
 
 | Field | Value |
 | --- | --- |
-| Date | |
-| Agent / model | |
-| Notes | |
-| Follow-ups | |
+| Date | 2026-07-22 |
+| Agent / model | Composer (Cursor agent) |
+| Notes | Host `--samples` (default 5, reject &lt; 1) → `HostRun.run` → top-level `BenchkitConfig.sampleCount` in `WHY_BENCHKIT_CONFIG`. `Config.parse` reads/validates it. `Runner` loads config once, `applyHostSampleCount` fills omitted measure opts (explicit opts win). Browser hooks unchanged (passthrough JSON). Verified: JsonSmoke (parse/merge/reject), fixture `run --targets interp --samples 3 --json-dir …` → all measures `samples.length == 3`; omitted flag → N=5; `--samples 0` exits 1. |
+| Follow-ups | Chunk 3 (pure Compare) can proceed in parallel; Chunk 4 needs this injection for compare `--samples`. No `@:sampleCount` meta yet — suite explicit override is only via direct `MeasureOptions` / future meta. |
 
 ---
 
@@ -656,3 +656,4 @@ Shared log template (copy under each chunk):
 | 2026-07-22 | Expanded from stub: samples, compare via temp json-dir, `--base`/`--head`, chunks 0–6; HostReporter dropped |
 | 2026-07-22 | Locked decisions from review: OS-temp json-dir; `lix download` per worktree; README TODOs (install customization, noise model); default `targetMs` 150 with N=5; freeze config/`sampleCount`/precedence; fail on `_dirty` / zero pairs; pure `Compare` outside host; split Chunk 4 → 4a/4b/4c; PR comment warn-only |
 | 2026-07-22 | Chunk 0 review: clarify Goals #3 — compare creates OS-temp `json-dir`; not a user `--json-dir` flag |
+| 2026-07-22 | Chunk 2 done: host `--samples` → `BenchkitConfig.sampleCount` via `WHY_BENCHKIT_CONFIG`; Runner applies with explicit-opts precedence |

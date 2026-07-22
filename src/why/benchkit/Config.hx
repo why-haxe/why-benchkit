@@ -10,6 +10,7 @@ import why.benchkit.reporter.JsonReporter;
 	```json
 	{
 	  "target": "node",
+	  "sampleCount": 5,
 	  "reporters": [
 		{ "name": "console" },
 		{ "name": "json", "outputDir": "out/<commit-hash-or-_dirty>" }
@@ -19,10 +20,15 @@ import why.benchkit.reporter.JsonReporter;
 
 	Root `target` is the CLI/host target string used in the JSON filename
 	(required when a `json` reporter is present).
+
+	Optional top-level `sampleCount` is injected by the host (`--samples`) and
+	applied by `Runner` to suite measures that omit an explicit count.
 **/
 typedef BenchkitConfig = {
 	final ?target:String;
 	final reporters:Array<ReporterSpec>;
+	/** Host-injected timed-loop count for suite measures (optional; must be >= 1). */
+	final ?sampleCount:Int;
 }
 
 /**
@@ -113,7 +119,36 @@ class Config {
 		}
 		if (hasJson && (target == null || target.length == 0))
 			throw 'why.benchkit: config.target is required when a json reporter is present';
-		return {target: target, reporters: specs};
+
+		final sampleCount = parseSampleCount(Reflect.field(raw, 'sampleCount'));
+		return {
+			target: target,
+			reporters: specs,
+			sampleCount: sampleCount,
+		};
+	}
+
+	/**
+		Parse optional top-level `sampleCount` from JSON (numbers may be Float).
+		Returns `null` when omitted; rejects values &lt; 1.
+	**/
+	static function parseSampleCount(raw:Dynamic):Null<Int> {
+		if (raw == null)
+			return null;
+		final n = if (Std.isOfType(raw, Int)) {
+			(raw : Int);
+		} else if (Std.isOfType(raw, Float)) {
+			final f = (raw : Float);
+			final asInt = Std.int(f);
+			// JSON numbers are often Float; reject non-integers (e.g. 3.5).
+			if (f != asInt)
+				throw 'why.benchkit: config.sampleCount must be an integer >= 1';
+			asInt;
+		} else
+			throw 'why.benchkit: config.sampleCount must be an integer >= 1';
+		if (n < 1)
+			throw 'why.benchkit: config.sampleCount must be >= 1';
+		return n;
 	}
 
 	static function createReporter(spec:ReporterSpec, ?target:String):Reporter {

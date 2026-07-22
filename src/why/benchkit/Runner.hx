@@ -1,6 +1,7 @@
 package why.benchkit;
 
 import travix.Logger;
+import why.benchkit.Config.BenchkitConfig;
 
 /**
 	Suite entry: macro discovers public measure methods, runs them, reports, exits.
@@ -17,23 +18,53 @@ class Runner {
 	/**
 		Run suite instances from an **array literal** so the macro can discover each
 		suite type’s public instance methods (`@:name` / `@:warmup` / `@:iterations`).
-		Loads reporters via `Config`, builds `BenchmarkResult`, reports, then exits.
+		Loads config via `Config`, builds `BenchmarkResult`, reports, then exits.
 	**/
 	public static macro function run(suites:Array<Dynamic>):Void;
 
 	/**
-		Load reporters via `Config` (fail-fast), then exit on error.
+		Load `BenchkitConfig` (fail-fast), then exit on error.
 		Emitted by the `run` macro — not part of the public suite DSL.
 	**/
 	@:noCompletion
-	public static function loadReporters():Array<Reporter> {
+	public static function loadConfig():BenchkitConfig {
 		try {
-			return Config.createReporters();
+			return Config.load();
+		} catch (e:Dynamic) {
+			Logger.println('why.benchkit: error: ${Std.string(e)}');
+			Logger.exit(1);
+			return {reporters: []};
+		}
+	}
+
+	/**
+		Build reporters from an already-loaded config (fail-fast), then exit on error.
+		Emitted by the `run` macro — not part of the public suite DSL.
+	**/
+	@:noCompletion
+	public static function reportersFromConfig(config:BenchkitConfig):Array<Reporter> {
+		try {
+			return Config.reportersFrom(config);
 		} catch (e:Dynamic) {
 			Logger.println('why.benchkit: error: ${Std.string(e)}');
 			Logger.exit(1);
 			return [];
 		}
+	}
+
+	/**
+		Fill `sampleCount` from host config when measure opts omit it.
+
+		Precedence: explicit `MeasureOptions.sampleCount` (incl. suite/macro opts)
+		> host `BenchkitConfig.sampleCount` > default `5` (inside `Measure.run`).
+	**/
+	@:noCompletion
+	public static function applyHostSampleCount(opts:MeasureOptions, ?hostSampleCount:Null<Int>):MeasureOptions {
+		if (opts.sampleCount != null || hostSampleCount == null)
+			return opts;
+		final merged:Dynamic = Reflect.copy(opts);
+		merged.sampleCount = hostSampleCount;
+		return merged;
 	}
 
 	/**

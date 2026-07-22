@@ -26,6 +26,8 @@ import why.benchkit.host.Targets;
 	Optional `--json-dir` writes nested JSON under `<json-dir>/<sha>/` or
 	`<json-dir>/_dirty/`, updates that folder's `manifest.json`, and rebuilds
 	the root clean-commit catalog.
+	Optional `--samples` (default 5) is injected as top-level `sampleCount` on
+	`BenchkitConfig` so the suite applies it to measures that omit an explicit count.
 
 	Uses travix's Haxe API directly (no `haxelib run travix` fallback).
 **/
@@ -42,7 +44,9 @@ class HostRun {
 		For each target, injects `WHY_BENCHKIT_CONFIG` so the suite reports
 		locally. Does not read suite result handoff files.
 	**/
-	public static function run(targets:Targets, libraryRoot:String, ?jsonDir:String):Void {
+	public static function run(targets:Targets, libraryRoot:String, ?jsonDir:String, sampleCount:Int = 5):Void {
+		if (sampleCount < 1)
+			throw 'why-benchkit: sampleCount must be >= 1';
 		ensureBenchHxml();
 
 		final travixConfigDir = Path.normalize(Path.join([libraryRoot, '.travix']));
@@ -88,13 +92,14 @@ class HostRun {
 		};
 
 		Sys.println('why-benchkit: running targets [${targets.join(", ")}]');
+		Sys.println('why-benchkit: samples $sampleCount');
 		if (jsonDirAbs != null && jsonOutput != null) {
 			Sys.println('why-benchkit: json-dir $jsonDirAbs');
 			Sys.println('why-benchkit: json output ${jsonOutput.path}' + (jsonOutput.dirty ? ' (dirty)' : ''));
 		}
 
 		for (target in targets) {
-			Sys.putEnv(BenchkitEnv.CONFIG, configJson(target, jsonOutput != null ? jsonOutput.path : null));
+			Sys.putEnv(BenchkitEnv.CONFIG, configJson(target, sampleCount, jsonOutput != null ? jsonOutput.path : null));
 
 			if (target == Js) {
 				// Replaces cwd `.travix` for this run (not a merge). See `.travix/README.md`.
@@ -125,8 +130,9 @@ class HostRun {
 		Always includes console; adds json under
 		`<outputDir>/<haxeVersion>/<target>.json` when `outputDir` is set
 		(root `target` + reporter `outputDir`).
+		Always sets top-level `sampleCount` from the host `--samples` value.
 	**/
-	static function configJson(target:Target, ?outputDir:String):String {
+	static function configJson(target:Target, sampleCount:Int, ?outputDir:String):String {
 		final reporters:Array<ReporterSpec> = [{name: 'console'}];
 		if (outputDir != null && outputDir != '') {
 			reporters.push({
@@ -137,6 +143,7 @@ class HostRun {
 		final config:BenchkitConfig = {
 			target: target,
 			reporters: reporters,
+			sampleCount: sampleCount,
 		};
 		return Json.stringify(config);
 	}

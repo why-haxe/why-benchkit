@@ -39,6 +39,7 @@ class JsonSmoke {
 
 		Sys.putEnv(BenchkitEnv.CONFIG, Json.stringify({
 			target: cliTarget,
+			sampleCount: 3,
 			reporters: [{name: "console"}, {name: "json", outputDir: outputDir},],
 		}));
 		final fromEnv = Config.createReporters();
@@ -48,6 +49,13 @@ class JsonSmoke {
 			throw "JsonSmoke: expected first env reporter to be ConsoleReporter";
 		if (!Std.isOfType(fromEnv[1], JsonReporter))
 			throw "JsonSmoke: expected second env reporter to be JsonReporter";
+
+		final loaded = Config.load();
+		if (loaded.sampleCount != 3)
+			throw 'JsonSmoke: expected sampleCount 3 from env, got ${loaded.sampleCount}';
+
+		assertHostSampleCountMerge();
+		assertSampleCountParseRejects();
 
 		final envDoc:BenchmarkResult = {
 			haxeVersion: haxeVer,
@@ -187,6 +195,61 @@ class JsonSmoke {
 			throw "JsonSmoke: measure should omit totalMs / opsPerSec";
 
 		Sys.println('JsonSmoke wrote $outPath (haxe ${roundtrip.haxeVersion}, target ${roundtrip.target})');
+	}
+
+	static function assertHostSampleCountMerge():Void {
+		final base = {name: "m", iterations: 10, warmup: 1};
+		final fromHost = why.benchkit.Runner.applyHostSampleCount(base, 3);
+		if (fromHost.sampleCount != 3)
+			throw 'JsonSmoke: expected host sampleCount 3, got ${fromHost.sampleCount}';
+		if (fromHost.name != "m" || fromHost.iterations != 10 || fromHost.warmup != 1)
+			throw "JsonSmoke: host merge should preserve other MeasureOptions fields";
+
+		final withExtras = why.benchkit.Runner.applyHostSampleCount({
+			name: "m",
+			iterations: 10,
+			warmup: 1,
+			targetMs: 200,
+			minIterations: 2,
+		}, 4);
+		if (withExtras.sampleCount != 4 || withExtras.targetMs != 200 || withExtras.minIterations != 2)
+			throw "JsonSmoke: host merge should preserve adaptive knobs";
+
+		final explicit = why.benchkit.Runner.applyHostSampleCount({
+			name: "m",
+			iterations: 10,
+			warmup: 1,
+			sampleCount: 7,
+		}, 3);
+		if (explicit.sampleCount != 7)
+			throw 'JsonSmoke: explicit sampleCount should beat host, got ${explicit.sampleCount}';
+
+		final omitted = why.benchkit.Runner.applyHostSampleCount(base, null);
+		if (omitted.sampleCount != null)
+			throw 'JsonSmoke: null host should leave sampleCount omitted, got ${omitted.sampleCount}';
+	}
+
+	static function assertSampleCountParseRejects():Void {
+		assertThrowsSampleCount(0, "sampleCount 0");
+		assertThrowsSampleCount(3.5, "sampleCount 3.5");
+	}
+
+	static function assertThrowsSampleCount(value:Dynamic, label:String):Void {
+		var threw = false;
+		try {
+			Sys.putEnv(BenchkitEnv.CONFIG, Json.stringify({
+				reporters: [{name: "console"}],
+				sampleCount: value,
+			}));
+			Config.load();
+		} catch (e:Dynamic) {
+			threw = true;
+			final msg = Std.string(e);
+			if (msg.indexOf("sampleCount") < 0)
+				throw 'JsonSmoke: $label error should mention sampleCount, got $msg';
+		}
+		if (!threw)
+			throw 'JsonSmoke: expected $label to throw';
 	}
 
 	static function deleteIfExists(path:String):Void {

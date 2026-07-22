@@ -9,6 +9,10 @@ package why.benchkit;
 
 	After warmup and iteration resolution, `sampleCount` independent timed loops
 	run; `MeasureResult.samples` holds each, and `duration` is their mean.
+
+	When called via `Runner`, host `BenchkitConfig.sampleCount` is merged into
+	opts first (explicit `sampleCount` wins). Direct `Measure.run` callers that
+	omit `sampleCount` still get the library default of `5`.
 **/
 typedef MeasureOptions = {
 	/** Measurement name (defaults to empty when omitted). */
@@ -20,7 +24,9 @@ typedef MeasureOptions = {
 
 	/**
 		Independent timed loops after warmup (each with `iterations` runs).
-		Default: `5`. Must be >= 1.
+		Default: `5` when omitted here and no host config applies.
+		Must be >= 1. Precedence when using `Runner`: explicit opts >
+		host `BenchkitConfig.sampleCount` > `5`.
 	**/
 	?sampleCount:Int,
 
