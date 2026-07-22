@@ -500,14 +500,14 @@ Shared log template (copy under each chunk):
 
 #### Checklist
 
-- [ ] Resolve SHA to full hash; fail clearly if missing
-- [ ] Create OS-temp `json-dir` outside repo/worktrees
-- [ ] `git worktree add` to OS-temp path; cwd = worktree
-- [ ] Run `lix download` in worktree; fail with actionable message if missing/`lix` errors
-- [ ] Call shared HostRun with samples + that `json-dir`
-- [ ] Assert `folderId ==` full SHA (fail on `_dirty`)
-- [ ] Remove worktree best-effort; delete `json-dir` in `finally` when possible
-- [ ] Support sequential base then head into the same `json-dir`
+- [x] Resolve SHA to full hash; fail clearly if missing
+- [x] Create OS-temp `json-dir` outside repo/worktrees
+- [x] `git worktree add` to OS-temp path; cwd = worktree
+- [x] Run `lix download` in worktree; fail with actionable message if missing/`lix` errors
+- [x] Call shared HostRun with samples + that `json-dir`
+- [x] Assert `folderId ==` full SHA (fail on `_dirty`)
+- [x] Remove worktree best-effort; delete `json-dir` in `finally` when possible
+- [x] Support sequential base then head into the same `json-dir`
 
 #### Acceptance criteria
 
@@ -517,10 +517,10 @@ Shared log template (copy under each chunk):
 
 | Field | Value |
 | --- | --- |
-| Date | |
-| Agent / model | |
-| Notes | |
-| Follow-ups | |
+| Date | 2026-07-22 |
+| Agent / model | Composer (Cursor agent) |
+| Notes | Added `HostCompare`: `resolveSha`, `createJsonDir` / `removeJsonDir`, `runAtSha` (detached OS-temp worktree → `lix download` → `HostRun.run` → assert clean `<jsonDir>/<fullSha>/` → best-effort worktree remove), and `withRuns` (base then head into one OS-temp json-dir, callback, then delete json-dir). Actionable errors for bad refs / missing `lix` / non-zero `lix download`. Smoke: `haxe hostcompare.hxml` builds a temp fixture-shaped consumer git repo (root `travix.hxml` is gitignored), runs interp at two SHAs with `samples=1`, asserts both SHA folders and no leftover compare worktrees. |
+| Follow-ups | Chunk 4c: `compare` CLI loads JSON from `withRuns` artifacts, pure `Compare.diff`, table + exit policy. Travix may still `Sys.exit` mid-run (OS-temp json-dir / worktree best-effort remain mitigations). |
 
 ---
 
@@ -661,3 +661,4 @@ Shared log template (copy under each chunk):
 | 2026-07-22 | Chunk 2 done: host `--samples` → `BenchkitConfig.sampleCount` via `WHY_BENCHKIT_CONFIG`; Runner applies with explicit-opts precedence |
 | 2026-07-22 | Chunk 3 done: pure `why.benchkit.Compare` align/diff/verdicts + `CompareSmoke`; default threshold 0.10; `hasPairedMeasures` for zero-pair fail |
 | 2026-07-22 | Chunk 4a done: `HostRun.run` returns `HostRunStatus`; `HostRunCommand` maps to `Sys.exit`; travix hard-exit documented; `HostRunSmoke` + `hostrun.hxml` |
+| 2026-07-22 | Chunk 4b done: `HostCompare` run-at-SHA (OS-temp json-dir, worktree, `lix download`, shared `HostRun`, clean-SHA assert); `HostCompareSmoke` + `hostcompare.hxml` |

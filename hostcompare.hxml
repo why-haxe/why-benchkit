@@ -1,0 +1,11 @@
+# HostCompare run-at-SHA smoke (worktree + OS temp + lix + HostRun).
+# Usage: haxe hostcompare.hxml
+-cp src
+-cp tests
+-lib travix
+-lib why-unit
+-lib tink_cli
+-lib hx3compat
+-D no-deprecation-warnings
+-main HostCompareSmoke
+--interp
