@@ -6,6 +6,9 @@ package why.benchkit;
 	When `iterations` and/or `warmup` are omitted, measurement uses adaptive mode
 	(see `Measure.run` four-mode matrix). Explicit values always win. Adaptive
 	knobs below only apply when the corresponding adaptive path is active.
+
+	After warmup and iteration resolution, `sampleCount` independent timed loops
+	run; `MeasureResult.samples` holds each, and `duration` is their mean.
 **/
 typedef MeasureOptions = {
 	/** Measurement name (defaults to empty when omitted). */
@@ -16,8 +19,14 @@ typedef MeasureOptions = {
 	?warmup:Int,
 
 	/**
+		Independent timed loops after warmup (each with `iterations` runs).
+		Default: `5`. Must be >= 1.
+	**/
+	?sampleCount:Int,
+
+	/**
 		Timed-window budget in milliseconds when `iterations` is omitted.
-		Default: `500`.
+		Default: `150`.
 	**/
 	?targetMs:Float,
 	/**

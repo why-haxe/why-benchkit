@@ -19,11 +19,16 @@ import why.unit.time.Millisecond;
 	the timed loop lasts ~`targetMs`. When `warmup` is omitted, batches run
 	until successive batch means stabilize (or `maxWarmupMs` / iteration caps).
 
+	After warmup and iteration resolution, the timed loop runs `sampleCount`
+	times (default **5**). `samples` holds each loop’s wall time; `duration`
+	is their arithmetic mean.
+
 	All four modes are fully wired (no stubs): adaptive paths use
-	`doAdaptiveWarmup` / `doTimeBudgetedMeasure`; explicit values always win.
+	`doAdaptiveWarmup` / `calibrateIterations`; explicit values always win.
 **/
 class Measure {
-	static inline final DEFAULT_TARGET_MS:Float = 250;
+	static inline final DEFAULT_TARGET_MS:Float = 150;
+	static inline final DEFAULT_SAMPLE_COUNT:Int = 5;
 	static inline final DEFAULT_MIN_ITERATIONS:Int = 1;
 	static inline final DEFAULT_MAX_ITERATIONS:Int = 1_000_000_000;
 	static inline final DEFAULT_WARMUP_TOLERANCE:Float = 0.02;
@@ -39,6 +44,8 @@ class Measure {
 	function new() {}
 
 	public static function run<T>(fn:() -> T, ?opts:MeasureOptions):MeasureResult {
+		final sampleCount = resolveSampleCount(opts);
+
 		var warmup = opts?.warmup;
 		var iterations = opts?.iterations;
 
@@ -51,40 +58,48 @@ class Measure {
 				doWarmup(fn, v);
 		}
 
-		final duration = switch iterations {
+		// Resolve iterations once (fixed or time-budgeted calibration), then reuse
+		// that count for every sample. Calibration probes are outside `samples`;
+		// v1 does not discard the first sample — sample[0] may still see residual
+		// JIT/GC effects after probes.
+		switch iterations {
 			case null:
-				final timed = doTimeBudgetedMeasure(fn, opts);
-				iterations = timed.iterations;
-				timed.duration;
+				iterations = calibrateIterations( //
+					fn, //
+					opts?.targetMs ?? DEFAULT_TARGET_MS, //
+					opts?.minIterations ?? DEFAULT_MIN_ITERATIONS, //
+					opts?.maxIterations ?? DEFAULT_MAX_ITERATIONS //
+				);
 			case v if (v < 1):
 				throw "why.benchkit.Measure.run: iterations must be >= 1";
-			case v:
-				doMeasure(fn, v);
+			case _:
 		}
+
+		final samples = [for (_ in 0...sampleCount) doMeasure(fn, iterations)];
+		final duration = meanMs(samples);
 
 		return {
 			name: opts?.name ?? "",
 			duration: duration,
 			iterations: iterations,
 			warmup: warmup,
+			samples: samples,
 		}
 	}
 
-	/**
-		After warmup already done: calibrate iteration count to ~`targetMs`
-		and run a single contiguous timed loop.
-	**/
-	static function doTimeBudgetedMeasure<T>(fn:() -> T, opts:Null<MeasureOptions>):{duration:Millisecond, iterations:Int} {
-		final iterations = calibrateIterations( //
-			fn, //
-			opts?.targetMs ?? DEFAULT_TARGET_MS, //
-			opts?.minIterations ?? DEFAULT_MIN_ITERATIONS, //
-			opts?.maxIterations ?? DEFAULT_MAX_ITERATIONS //
-		);
-		return {
-			duration: doMeasure(fn, iterations),
-			iterations: iterations,
-		};
+	static function resolveSampleCount(opts:Null<MeasureOptions>):Int {
+		final n = opts?.sampleCount ?? DEFAULT_SAMPLE_COUNT;
+		if (n < 1)
+			throw "why.benchkit.Measure.run: sampleCount must be >= 1";
+		return n;
+	}
+
+	/** Arithmetic mean of one or more sample durations. */
+	static function meanMs(samples:Array<Millisecond>):Millisecond {
+		var sum = new Millisecond(0);
+		for (s in samples)
+			sum = sum + s;
+		return sum / samples.length;
 	}
 
 	static function doWarmup<T>(fn:() -> T, warmup:Int):Void {
@@ -179,6 +194,7 @@ class Measure {
 		Short timed probe after warmup: grow the batch until wall time is
 		measurable, then `ceil(targetMs / msPerIter)` clamped to
 		`[minIterations, maxIterations]`. Zero / non-finite duration → `maxIterations`.
+		Probes are untimed extras before the sample loop (not recorded in `samples`).
 	**/
 	static function calibrateIterations<T>(fn:() -> T, targetMs:Float, minIterations:Int, maxIterations:Int):Int {
 		if (!(targetMs > 0) || !Math.isFinite(targetMs))

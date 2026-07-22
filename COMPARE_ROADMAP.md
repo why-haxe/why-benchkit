@@ -330,7 +330,7 @@ Shared log template (copy under each chunk):
 | Date | 2026-07-22 |
 | Agent / model | Composer (Auto) |
 | Notes | Spec freeze complete. Locked decisions treated as frozen — see **Locked decisions (Chunk 0)** table above (verbatim): sample count default **5** on `Measure.run` and host `--samples`; `targetMs` = **150**; options field `MeasureOptions.sampleCount` (result field `samples`); host→guest via top-level `sampleCount` on `BenchkitConfig` in `WHY_BENCHKIT_CONFIG`; precedence explicit measure opts **>** host config **>** 5; compare `json-dir` = **OS temp only** (outside repo/worktrees); cleanup via `try/finally` with OS temp as crash safety net; JSON folder must be `<json-dir>/<full-sha>/…` — **fail** on `_dirty` / SHA mismatch; worktree cwd = clean detached checkout; after `git worktree add` run **`lix download`** (README TODO for custom install later); v1 noise = mean ± threshold only (README TODO for variance/median); pure `why.benchkit.Compare` (not under `host/`); HostRun **returns status**, CLI owns `Sys.exit`; zero paired measures → non-zero exit; `--post-pr-comment` failure = **warn only**; Chunk 4 split **4a** / **4b** / **4c**. No HostReporter / IPC. Flags: `--samples` (5), compare `--base`/`--head`/`--targets`/`--threshold` (0.10). Metric: mean ops/sec; major = \|delta\| ≥ threshold; fail on major degradation. |
-| Follow-ups | Next: Chunk 1 — Sampled `Measure.run` (code). Current drift to fix there: `Measure.DEFAULT_TARGET_MS` is 250 and `MeasureOptions` docs say 500 — both must become **150**. |
+| Follow-ups | Next: Chunk 2 — Host `--samples` on `run`. Chunk 1 completed: `DEFAULT_TARGET_MS` / `MeasureOptions` now **150**. README still documents 500 until Chunk 5. |
 
 ---
 
@@ -350,16 +350,16 @@ Shared log template (copy under each chunk):
 
 #### Checklist
 
-- [ ] Add `sampleCount` on `MeasureOptions`
-- [ ] Default N = 5 when omitted
-- [ ] Reject N &lt; 1 with a clear error
-- [ ] Change default `targetMs` to **150** (code + `MeasureOptions` docs; fix any “500” / “250” drift)
-- [ ] Warmup once; calibrate / fix `iterations` once; loop N timed measures
-- [ ] Set `samples` to the N durations; set `duration` to arithmetic mean
-- [ ] Keep fixed / adaptive iteration modes working with sampling
-- [ ] Comment: calibration probes are outside `samples`; no first-sample discard in v1
-- [ ] Tests: `samples.length == N`; mean of `samples` equals `duration` (within float tolerance)
-- [ ] Follow [`AGENTS.md`](AGENTS.md): `final`, explicit member types, pure core logic
+- [x] Add `sampleCount` on `MeasureOptions`
+- [x] Default N = 5 when omitted
+- [x] Reject N &lt; 1 with a clear error
+- [x] Change default `targetMs` to **150** (code + `MeasureOptions` docs; fix any “500” / “250” drift)
+- [x] Warmup once; calibrate / fix `iterations` once; loop N timed measures
+- [x] Set `samples` to the N durations; set `duration` to arithmetic mean
+- [x] Keep fixed / adaptive iteration modes working with sampling
+- [x] Comment: calibration probes are outside `samples`; no first-sample discard in v1
+- [x] Tests: `samples.length == N`; mean of `samples` equals `duration` (within float tolerance)
+- [x] Follow [`AGENTS.md`](AGENTS.md): `final`, explicit member types, pure core logic
 
 #### Acceptance criteria
 
@@ -371,11 +371,10 @@ Shared log template (copy under each chunk):
 
 | Field | Value |
 | --- | --- |
-| Date | |
-| Agent / model | |
-| Notes | |
-| Follow-ups | |
-
+| Date | 2026-07-22 |
+| Agent / model | Composer (Auto) |
+| Notes | Sampled `Measure.run`: warmup once → resolve iterations once (fixed or `calibrateIterations`) → N timed loops; `samples` filled; `duration` = arithmetic mean via `Millisecond` ops. Defaults: `sampleCount` **5**, `targetMs` **150** (`DEFAULT_TARGET_MS` was 250; `MeasureOptions` docs were 500). Rejects `sampleCount < 1`. Calibration probes documented as outside `samples`; no first-sample discard. Smoke extended for default/explicit/budgeted N and mean↔duration; existing matrix tests use `sampleCount: 1` for speed. Host `--samples` / Runner injection left for Chunk 2. README still says targetMs 500 — Chunk 5. |
+| Follow-ups | Chunk 2: host `--samples` + `BenchkitConfig.sampleCount` injection. Chunk 5: README `targetMs` **150**. |
 ---
 
 ### Chunk 2 — Host `--samples` on `run`
