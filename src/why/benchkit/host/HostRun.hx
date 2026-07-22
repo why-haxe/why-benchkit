@@ -37,14 +37,21 @@ class HostRun {
 	function new() {}
 
 	/**
-		Run the host orchestration. Exits the process on success (0) or after
-		printing errors. Travix commands call `Sys.exit` on toolchain/build
-		failure, which aborts remaining targets (same as `travix` CLI).
+		Run the host orchestration and **return** success/failure so callers
+		(compare, tests) can continue in the same process.
+
+		Does **not** call `Sys.exit` for host-side setup failures or success —
+		CLI commands (`HostRunCommand`) map `HostRunStatus` → process exit.
+
+		Travix `install` / `buildAndRun` may still call `Sys.exit` on
+		toolchain/build failure, which aborts remaining targets and skips any
+		caller `finally` cleanup. OS-temp `json-dir` (compare) is the leak
+		mitigation when that hard-exit happens.
 
 		For each target, injects `WHY_BENCHKIT_CONFIG` so the suite reports
 		locally. Does not read suite result handoff files.
 	**/
-	public static function run(targets:Targets, libraryRoot:String, ?jsonDir:String, sampleCount:Int = 5):Void {
+	public static function run(targets:Targets, libraryRoot:String, ?jsonDir:String, sampleCount:Int = 5):HostRunStatus {
 		if (sampleCount < 1)
 			throw 'why-benchkit: sampleCount must be >= 1';
 		ensureBenchHxml();
@@ -55,22 +62,19 @@ class HostRun {
 		if (!FileSystem.exists(benchHxml)) {
 			Sys.println('why-benchkit: missing $BENCH_HXML in ${Sys.getCwd()}');
 			Sys.println('Expected a suite hxml with `-main` calling Runner.run([...]).');
-			Sys.exit(1);
-			return;
+			return Failed;
 		}
 
 		if (targets.indexOf(Js) >= 0) {
 			if (!FileSystem.exists(travixConfigDir) || !FileSystem.isDirectory(travixConfigDir)) {
 				Sys.println('why-benchkit: packaged travix config missing: $travixConfigDir');
 				Sys.println('Expected hooks at $travixConfigDir/js/hooks.js (set TRAVIX_CONFIG_DIR for js).');
-				Sys.exit(1);
-				return;
+				return Failed;
 			}
 			final hooks = Path.join([travixConfigDir, 'js', 'hooks.js']);
 			if (!FileSystem.exists(hooks)) {
 				Sys.println('why-benchkit: packaged js hooks missing: $hooks');
-				Sys.exit(1);
-				return;
+				return Failed;
 			}
 		}
 
@@ -122,7 +126,7 @@ class HostRun {
 			JsonManifest.rebuild(jsonDirAbs);
 		}
 
-		Sys.exit(0);
+		return Ok;
 	}
 
 	/**

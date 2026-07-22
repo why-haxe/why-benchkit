@@ -460,14 +460,16 @@ Shared log template (copy under each chunk):
 **Files (expected):**
 
 - [`src/why/benchkit/host/HostRun.hx`](src/why/benchkit/host/HostRun.hx)
+- [`src/why/benchkit/host/HostRunStatus.hx`](src/why/benchkit/host/HostRunStatus.hx)
 - [`src/why/benchkit/host/HostRunCommand.hx`](src/why/benchkit/host/HostRunCommand.hx) — `Sys.exit` only at command edge
+- Smoke: `tests/HostRunSmoke.hx` + `hostrun.hxml`
 
 #### Checklist
 
-- [ ] Shared runner returns a status / throws instead of unconditional `Sys.exit(0)` at end
-- [ ] `HostRunCommand` maps status → process exit
-- [ ] Document that travix may still `Sys.exit` on toolchain failure (OS-temp json-dir is the leak mitigation)
-- [ ] Existing `why-benchkit run` behavior unchanged from the user’s POV
+- [x] Shared runner returns a status / throws instead of unconditional `Sys.exit(0)` at end
+- [x] `HostRunCommand` maps status → process exit
+- [x] Document that travix may still `Sys.exit` on toolchain failure (OS-temp json-dir is the leak mitigation)
+- [x] Existing `why-benchkit run` behavior unchanged from the user’s POV
 
 #### Acceptance criteria
 
@@ -478,10 +480,10 @@ Shared log template (copy under each chunk):
 
 | Field | Value |
 | --- | --- |
-| Date | |
-| Agent / model | |
-| Notes | |
-| Follow-ups | |
+| Date | 2026-07-22 |
+| Agent / model | Composer (Cursor agent) |
+| Notes | `HostRun.run` now returns `HostRunStatus` (`Ok=0` / `Failed=1`) instead of `Sys.exit`. Host-side setup failures (missing `bench.hxml`, missing js travix config/hooks) print then `return Failed`. Success `return Ok`. Docs note travix may still hard-exit on toolchain/build failure (OS-temp json-dir is leak mitigation). `HostRunCommand` maps status → `Sys.exit(status)`. Smoke: `haxe hostrun.hxml` — Failed×2 without bench.hxml, then Ok×2 via travix interp on `fixture/foo`. Fixture `run --targets interp` still exits 0. |
+| Follow-ups | Chunk 4b: run-at-SHA worktree + OS temp + `lix download`, calling shared `HostRun.run` and checking status. |
 
 ---
 
@@ -658,3 +660,4 @@ Shared log template (copy under each chunk):
 | 2026-07-22 | Chunk 0 review: clarify Goals #3 — compare creates OS-temp `json-dir`; not a user `--json-dir` flag |
 | 2026-07-22 | Chunk 2 done: host `--samples` → `BenchkitConfig.sampleCount` via `WHY_BENCHKIT_CONFIG`; Runner applies with explicit-opts precedence |
 | 2026-07-22 | Chunk 3 done: pure `why.benchkit.Compare` align/diff/verdicts + `CompareSmoke`; default threshold 0.10; `hasPairedMeasures` for zero-pair fail |
+| 2026-07-22 | Chunk 4a done: `HostRun.run` returns `HostRunStatus`; `HostRunCommand` maps to `Sys.exit`; travix hard-exit documented; `HostRunSmoke` + `hostrun.hxml` |

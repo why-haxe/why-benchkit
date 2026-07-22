@@ -36,6 +36,7 @@ class HostRunCommand {
 	/**
 		Run the consumer suite (`bench.hxml`) across one or more Haxe targets via travix.
 		Install project dependencies yourself before invoking this command.
+		Maps `HostRun` status to process exit (travix may still `Sys.exit` on toolchain failure).
 	**/
 	@:defaultCommand
 	public function run():Void {
@@ -61,7 +62,8 @@ class HostRunCommand {
 					else
 						haxe.io.Path.normalize(absolutePath(trimmed));
 			};
-			HostRun.run(targets, libraryRoot, jsonOutputDir, samples);
+			final status = HostRun.run(targets, libraryRoot, jsonOutputDir, samples);
+			Sys.exit(status);
 		} catch (e:Dynamic) {
 			Sys.println(Std.string(e));
 			Sys.exit(1);

@@ -1,0 +1,11 @@
+# HostRun status smoke: returns Failed without Sys.exit.
+# Usage: haxe hostrun.hxml
+-cp src
+-cp tests
+-lib travix
+-lib why-unit
+-lib tink_cli
+-lib hx3compat
+-D no-deprecation-warnings
+-main HostRunSmoke
+--interp
