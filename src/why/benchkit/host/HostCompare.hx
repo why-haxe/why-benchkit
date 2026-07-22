@@ -219,14 +219,62 @@ class HostCompare {
 			lines.push(formatEntryRow(e));
 
 		lines.push('');
-		lines.push('paired=${Compare.pairedCount(report)}'
+		lines.push(summaryLine(report));
+		return lines.join('\n');
+	}
+
+	/**
+		Markdown summary for PR comments (pure). Degradations first, then
+		improved / unchanged / missing. Includes `HostPrComment.MARKER` for
+		idempotent create-or-update.
+	**/
+	public static function formatMarkdownReport(report:CompareReport):String {
+		final lines:Array<String> = [];
+		lines.push(HostPrComment.MARKER);
+		lines.push('## why-benchkit compare');
+		lines.push('');
+		lines.push('`${shortSha(report.base)}` → `${shortSha(report.head)}` (threshold ${formatPct(report.threshold)})');
+		lines.push('');
+
+		appendMarkdownSection(lines, 'Degraded', Compare.degraded(report));
+		appendMarkdownSection(lines, 'Improved', Compare.improved(report));
+		appendMarkdownSection(lines, 'Unchanged', Compare.unchanged(report));
+		appendMarkdownSection(lines, 'Missing', Compare.missing(report));
+
+		lines.push('**Summary:** `${summaryLine(report)}`');
+		return lines.join('\n');
+	}
+
+	static function summaryLine(report:CompareReport):String {
+		return 'paired=${Compare.pairedCount(report)}'
 			+ ' improved=${Compare.improved(report).length}'
 			+ ' degraded=${Compare.degraded(report).length}'
 			+ ' unchanged=${Compare.unchanged(report).length}'
 			+ ' missing=${Compare.missing(report).length}'
 			+ ' (missing_base=${Compare.entriesWithVerdict(report, CompareVerdict.MissingBase).length}'
-			+ ' missing_head=${Compare.entriesWithVerdict(report, CompareVerdict.MissingHead).length})');
-		return lines.join('\n');
+			+ ' missing_head=${Compare.entriesWithVerdict(report, CompareVerdict.MissingHead).length})';
+	}
+
+	static function appendMarkdownSection(lines:Array<String>, title:String, entries:Array<CompareEntry>):Void {
+		lines.push('### $title');
+		lines.push('');
+		if (entries.length == 0) {
+			lines.push('_None_');
+			lines.push('');
+			return;
+		}
+		lines.push('| Suite | Measure | Target | Haxe | Base | Head | Delta | Verdict |');
+		lines.push('| --- | --- | --- | --- | ---: | ---: | ---: | --- |');
+		for (e in entries) {
+			lines.push('| ${mdCell(e.suite)} | ${mdCell(e.measure)} | ${mdCell(e.target)} | ${mdCell(e.haxeVersion)}'
+				+ ' | ${formatOps(e.baseOps)} | ${formatOps(e.headOps)} | ${formatDelta(e.delta)}'
+				+ ' | ${(e.verdict : String)} |');
+		}
+		lines.push('');
+	}
+
+	static function mdCell(s:String):String {
+		return StringTools.replace(StringTools.replace(s, '|', '\\|'), '\n', ' ');
 	}
 
 	static function parseDoc(path:String, cliTarget:String):BenchmarkResult {

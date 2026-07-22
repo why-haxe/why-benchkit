@@ -53,6 +53,14 @@ class HostCompareCommand {
 	@:alias(false)
 	public var failOnMissing:Bool = false;
 
+	/**
+		Post (or update) a compare markdown summary on the current GitHub PR.
+		Off by default. Comment failure warns only — never overrides compare exit codes.
+	**/
+	@:flag('post-pr-comment')
+	@:alias(false)
+	public var postPrComment:Bool = false;
+
 	public function new(libraryRoot:String) {
 		this.libraryRoot = libraryRoot;
 	}
@@ -64,6 +72,7 @@ class HostCompareCommand {
 		(and no missing sides if `--fail-on-missing`); `1` on degradation,
 		zero paired measures, orchestration/load failure, or fail-on-missing hits.
 		Creates its own OS-temp `json-dir` (no `--json-dir` flag).
+		With `--post-pr-comment`, also posts/updates a PR comment (warn-only on failure).
 	**/
 	@:defaultCommand
 	public function run():Void {
@@ -88,7 +97,7 @@ class HostCompareCommand {
 			}
 
 			final libRoot = Path.normalize(absolutePath(libraryRoot));
-			final code = HostCompare.withRuns(baseRef, headRef, targets, libRoot, samples, artifacts -> {
+			final outcome = HostCompare.withRuns(baseRef, headRef, targets, libRoot, samples, artifacts -> {
 				final baseDocs = HostCompare.loadDocs(artifacts.jsonDir, artifacts.baseSha);
 				final headDocs = HostCompare.loadDocs(artifacts.jsonDir, artifacts.headSha);
 				final report:CompareReport = Compare.diff(baseDocs, headDocs, {
@@ -97,9 +106,15 @@ class HostCompareCommand {
 					threshold: threshold,
 				});
 				Sys.println(HostCompare.formatReport(report));
-				return HostCompare.exitCode(report, failOnMissing);
+				return {
+					code: HostCompare.exitCode(report, failOnMissing),
+					report: report,
+				};
 			});
-			Sys.exit(code);
+			// Flag-gated; skipped entirely when off (no gh / network). Warn-only on failure.
+			if (postPrComment)
+				HostPrComment.maybePost(outcome.report);
+			Sys.exit(outcome.code);
 		} catch (e:Dynamic) {
 			Sys.println(Std.string(e));
 			Sys.exit(1);

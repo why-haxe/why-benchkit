@@ -193,6 +193,7 @@ lix run why-benchkit compare --base origin/main --head HEAD --targets interp,nod
 | `--samples` | no | `5` | Passed through to both SHA runs |
 | `--threshold` | no | `0.10` | Relative ops/sec delta for “major” (default = 10%) |
 | `--fail-on-missing` | no | off | Non-zero exit if any measure exists on only one side |
+| `--post-pr-comment` | no | off | Post/update a markdown summary on the current GitHub PR (warn-only on failure) |
 
 **What it does**
 
@@ -210,6 +211,30 @@ lix run why-benchkit compare --base origin/main --head HEAD --targets interp,nod
 | `1` | Major degradation, orchestration / load failure, `_dirty` / SHA folder mismatch, **zero** paired measures, or `--fail-on-missing` with any missing-side pair |
 
 Missing-side counts are always printed. Pairing key: `(haxeVersion, target, suite, measure)` using the CLI/host target from the JSON filename.
+
+#### Optional PR comment (`--post-pr-comment`)
+
+When set, compare posts (or updates) a single markdown summary on the current GitHub pull request after printing the table. Uses an HTML marker (`<!-- why-benchkit-compare -->`) so re-runs update the same comment.
+
+- Prefers the [`gh`](https://cli.github.com/) CLI when available (`gh pr view` + `gh api`).
+- Otherwise uses Actions env: `GITHUB_EVENT_PATH` / `GITHUB_REF` (PR number), `GITHUB_REPOSITORY`, `GITHUB_TOKEN`, optional `GITHUB_API_URL`, via `curl`.
+- No-op with a clear message when not in a PR context or credentials are missing.
+- **Comment failure is warn-only** — it never overrides the compare exit code (degradations / orchestration still decide `0`/`1`).
+- Flag off → no `gh` / network calls.
+
+GitHub Actions example:
+
+```yaml
+permissions:
+  contents: read
+  pull-requests: write
+steps:
+  - uses: actions/checkout@v4
+    with:
+      fetch-depth: 0
+  # … ensure base/head SHAs are available …
+  - run: lix run why-benchkit compare --base origin/main --head HEAD --targets node --post-pr-comment
+```
 
 **TODO:** Allow customizing the per-worktree install command (today hard-coded `lix download`).
 
@@ -266,7 +291,7 @@ From a checkout of this repo (interp smokes; no consumer project required):
 ```bash
 haxe smoke.hxml              # Measure sampling + mean duration (default N=5, targetMs 150)
 haxe compare.hxml            # Pure Compare.diff / verdicts
-haxe hostcomparecmd.hxml     # Host compare load + table + exit policy (synthetic JSON)
+haxe hostcomparecmd.hxml     # Host compare load + table + exit policy + PR markdown helpers (synthetic JSON)
 haxe hostcompare.hxml        # Worktree + OS-temp json-dir + lix download + HostRun (needs git + lix)
 haxe check-run.hxml          # CLI entry compiles; prints why-benchkit help (includes compare)
 ```

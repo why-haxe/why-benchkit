@@ -614,13 +614,13 @@ Shared log template (copy under each chunk):
 
 #### Checklist
 
-- [ ] Add `--post-pr-comment` (off by default)
-- [ ] Detect PR context (e.g. `gh pr view`, or `GITHUB_EVENT_PATH` / `GITHUB_TOKEN`)
-- [ ] Format markdown from `CompareReport` (degradations first)
-- [ ] Post or update a single bot comment (idempotent marker HTML comment if updating)
-- [ ] No-op with a clear message when not in a PR / missing token
-- [ ] On comment failure: **warn only**; compare exit code still driven by degradations / orchestration
-- [ ] Document required `pull-requests: write` (or equivalent) in README
+- [x] Add `--post-pr-comment` (off by default)
+- [x] Detect PR context (e.g. `gh pr view`, or `GITHUB_EVENT_PATH` / `GITHUB_TOKEN`)
+- [x] Format markdown from `CompareReport` (degradations first)
+- [x] Post or update a single bot comment (idempotent marker HTML comment if updating)
+- [x] No-op with a clear message when not in a PR / missing token
+- [x] On comment failure: **warn only**; compare exit code still driven by degradations / orchestration
+- [x] Document required `pull-requests: write` (or equivalent) in README
 
 #### Acceptance criteria
 
@@ -631,10 +631,10 @@ Shared log template (copy under each chunk):
 
 | Field | Value |
 | --- | --- |
-| Date | |
-| Agent / model | |
-| Notes | |
-| Follow-ups | |
+| Date | 2026-07-22 |
+| Agent / model | Composer (Cursor agent) |
+| Notes | `--post-pr-comment` (default off) on `HostCompareCommand`. Pure `HostCompare.formatMarkdownReport` (marker + degradations first). `HostPrComment`: detect via `gh pr view` / `gh repo view`, else Actions `GITHUB_EVENT_PATH`/`GITHUB_REF` + `GITHUB_TOKEN` + `GITHUB_REPOSITORY` (+ optional `GITHUB_API_URL`) with `curl`; create-or-update by `<!-- why-benchkit-compare -->` marker; `maybePost` warn-only (never changes exit). Flag off → no helper call. README: flag table + Actions `pull-requests: write` example. Smoke: markdown order + pure helpers in `HostCompareCommandSmoke` (no live PR post). |
+| Follow-ups | Live PR/CI comment post not exercised in smoke (would need a real PR + token). |
 
 ---
 
@@ -664,3 +664,4 @@ Shared log template (copy under each chunk):
 | 2026-07-22 | Chunk 4b done: `HostCompare` run-at-SHA (OS-temp json-dir, worktree, `lix download`, shared `HostRun`, clean-SHA assert); `HostCompareSmoke` + `hostcompare.hxml` |
 | 2026-07-22 | Chunk 4c done: `HostCompareCommand` + `Run.compare`; loadDocs rewrites target from filename; table + exit policy; `HostCompareCommandSmoke` + `hostcomparecmd.hxml` |
 | 2026-07-22 | Chunk 5 done: README samples / `targetMs` 150 / compare usage / exit codes / worktree+`lix download` / TODOs / local verify smokes |
+| 2026-07-22 | Chunk 6 done: `--post-pr-comment` warn-only via `HostPrComment` (`gh` or Actions+`curl`); markdown report + idempotent marker; README `pull-requests: write` |

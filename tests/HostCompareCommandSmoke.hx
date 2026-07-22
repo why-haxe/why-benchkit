@@ -8,10 +8,11 @@ import why.benchkit.CompareVerdict;
 import why.benchkit.MeasureResult;
 import why.benchkit.SuiteResult;
 import why.benchkit.host.HostCompare;
+import why.benchkit.host.HostPrComment;
 import why.unit.time.Millisecond;
 
 /**
-	HostCompare load / format / exit-policy smoke (synthetic JSON, no travix).
+	HostCompare load / format / exit-policy / PR-comment smoke (synthetic JSON, no travix).
 	Usage: haxe hostcomparecmd.hxml
 **/
 class HostCompareCommandSmoke {
@@ -19,6 +20,7 @@ class HostCompareCommandSmoke {
 		assertLoadRewritesTargetFromFilename();
 		assertExitPolicy();
 		assertFormatReport();
+		assertMarkdownAndPrHelpers();
 		Sys.println('HostCompareCommandSmoke ok');
 	}
 
@@ -123,6 +125,67 @@ class HostCompareCommandSmoke {
 		if (text.indexOf('paired=1') < 0 || text.indexOf('missing=0') < 0)
 			throw 'HostCompareCommandSmoke: format missing summary counts';
 		Sys.println('HostCompareCommandSmoke formatReport ok');
+	}
+
+	/** Markdown + pure PR helpers (no network / gh). */
+	static function assertMarkdownAndPrHelpers():Void {
+		final baseDoc = doc('4.3.0', 'node', 'S', [
+			measure('slow', 1000, 1000),
+			measure('fast', 1000, 1000),
+			measure('only_base', 1000, 1000),
+		]);
+		final headDoc = doc('4.3.0', 'node', 'S', [
+			measure('slow', 1000, 1300), // degraded
+			measure('fast', 1000, 700), // improved
+		]);
+		final report = Compare.diff([baseDoc], [headDoc], {
+			base: 'aaaaaaaaaaaaaaaa',
+			head: 'bbbbbbbbbbbbbbbb',
+			threshold: 0.10,
+		});
+		final md = HostCompare.formatMarkdownReport(report);
+		if (md.indexOf(HostPrComment.MARKER) < 0)
+			throw 'HostCompareCommandSmoke: markdown missing marker';
+		final degIdx = md.indexOf('### Degraded');
+		final impIdx = md.indexOf('### Improved');
+		final uncIdx = md.indexOf('### Unchanged');
+		final missIdx = md.indexOf('### Missing');
+		if (degIdx < 0 || impIdx < 0 || uncIdx < 0 || missIdx < 0)
+			throw 'HostCompareCommandSmoke: markdown missing sections';
+		if (!(degIdx < impIdx && impIdx < uncIdx && uncIdx < missIdx))
+			throw 'HostCompareCommandSmoke: markdown section order should be degraded→improved→unchanged→missing';
+		if (md.indexOf('degraded') < 0 || md.indexOf('improved') < 0)
+			throw 'HostCompareCommandSmoke: markdown missing verdicts';
+		if (md.indexOf('paired=2') < 0)
+			throw 'HostCompareCommandSmoke: markdown missing summary';
+
+		if (HostPrComment.prNumberFromEvent({pull_request: {number: 42}}) != 42)
+			throw 'HostCompareCommandSmoke: prNumberFromEvent failed';
+		if (HostPrComment.prNumberFromEvent({issue: {number: 1}}) != null)
+			throw 'HostCompareCommandSmoke: prNumberFromEvent should ignore non-PR events';
+		if (HostPrComment.prNumberFromRef('refs/pull/99/merge') != 99)
+			throw 'HostCompareCommandSmoke: prNumberFromRef failed';
+		if (HostPrComment.prNumberFromRef('refs/heads/main') != null)
+			throw 'HostCompareCommandSmoke: prNumberFromRef should ignore branches';
+
+		final repo = HostPrComment.parseRepo('acme/why-benchkit');
+		if (repo == null || repo.owner != 'acme' || repo.repo != 'why-benchkit')
+			throw 'HostCompareCommandSmoke: parseRepo failed';
+		if (HostPrComment.parseRepo('bad') != null)
+			throw 'HostCompareCommandSmoke: parseRepo should reject bad input';
+
+		final id = HostPrComment.findCommentId([
+			{id: 1, body: 'hello'},
+			{id: 2, body: 'x ' + HostPrComment.MARKER + ' y'},
+			{id: 3, body: HostPrComment.MARKER},
+		], HostPrComment.MARKER);
+		if (id != 2)
+			throw 'HostCompareCommandSmoke: findCommentId should return first match (got $id)';
+		if (HostPrComment.findCommentId([{id: 9, body: 'nope'}], HostPrComment.MARKER) != null)
+			throw 'HostCompareCommandSmoke: findCommentId should miss';
+
+		// Do not call maybePost/postOrUpdate here — may hit a real PR via `gh`.
+		Sys.println('HostCompareCommandSmoke markdown + PR helpers ok');
 	}
 
 	static function measure(name:String, iterations:Int, durationMs:Float):MeasureResult {
